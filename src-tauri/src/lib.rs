@@ -29,9 +29,10 @@ pub fn run() {
         .plugin(plugins::system_tray::init())
         .invoke_handler(tauri::generate_handler![greet, update_tray_menu]);
 
-    // Only enable updater in release mode
-    #[cfg(not(debug_assertions))]
-    let builder = builder.plugin(tauri_plugin_updater::Builder::new().build());
+    // Updater disabled: requires signed package keys & endpoints.
+    // Re-enable by restoring plugins.updater in tauri.conf.json and uncommenting below.
+    // #[cfg(not(debug_assertions))]
+    // let builder = builder.plugin(tauri_plugin_updater::Builder::new().build());
 
     builder
         .run(tauri::generate_context!())

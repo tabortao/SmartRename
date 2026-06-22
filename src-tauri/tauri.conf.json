@@ -10,17 +10,6 @@
     "beforeBuildCommand": "pnpm build",
     "frontendDist": "../dist"
   },
-  "plugins": {
-    "updater": {
-      "pubkey": "__TAURI_UPDATER_PUBKEY__",
-      "endpoints": [
-        "__TAURI_UPDATER_ENDPOINT__"
-      ],
-      "windows": {
-        "installMode": "passive"
-      }
-    }
-  },
   "app": {
     "windows": [
       {
@@ -42,7 +31,7 @@
   "bundle": {
     "active": true,
     "targets": "all",
-    "createUpdaterArtifacts": true,
+    "createUpdaterArtifacts": false,
     "windows": {
       "nsis": {
         "installerIcon": "icons/icon.ico",
