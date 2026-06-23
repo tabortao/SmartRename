@@ -10,6 +10,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { useTranslation } from "react-i18next";
 import type { TemplateConfig } from "@/hooks/use-rename";
 
 interface TemplateEditorDialogProps {
@@ -20,16 +21,18 @@ interface TemplateEditorDialogProps {
 }
 
 const VAR_HELP = [
-  { var: "{Date}", desc: "Current date (default: YYYYMMDD)" },
-  { var: "{Date:YYYY-MM-DD}", desc: "Date with custom format" },
-  { var: "{Time}", desc: "Current time (default: HHMMSS)" },
-  { var: "{Time:HH-mm}", desc: "Time with custom format" },
-  { var: "{Ext}", desc: "File extension" },
-  { var: "{ParentDir}", desc: "Parent directory name" },
-  { var: "{OriginalName}", desc: "Original filename" },
-  { var: "{Input:topic}", desc: 'User input (label: "topic")' },
-  { var: "{Counter}", desc: "Auto-increment counter (1, 2, 3...)" },
-  { var: "{Counter:001}", desc: "Padded counter (001, 002...)" },
+  { var: "{Date}", descKey: "templateEditor.varDesc.date" },
+  { var: "{Date:YYYY-MM-DD}", descKey: "templateEditor.varDesc.dateCustom" },
+  { var: "{Time}", descKey: "templateEditor.varDesc.time" },
+  { var: "{Time:HH-mm}", descKey: "templateEditor.varDesc.timeCustom" },
+  { var: "{Ext}", descKey: "templateEditor.varDesc.ext" },
+  { var: "{ParentDir}", descKey: "templateEditor.varDesc.parentDir" },
+  { var: "{OriginalName}", descKey: "templateEditor.varDesc.originalName" },
+  { var: "{Input:topic}", descKey: "templateEditor.varDesc.input" },
+  { var: "{Counter}", descKey: "templateEditor.varDesc.counter" },
+  { var: "{Counter:001}", descKey: "templateEditor.varDesc.counterPadded" },
+  { var: "{Counter:01}", descKey: "templateEditor.varDesc.counterNum" },
+  { var: "v{Counter:01}", descKey: "templateEditor.varDesc.counterVersion" },
 ];
 
 export function TemplateEditorDialog({
@@ -38,6 +41,7 @@ export function TemplateEditorDialog({
   onClose,
   onSaved,
 }: TemplateEditorDialogProps) {
+  const { t } = useTranslation();
   const [name, setName] = useState("");
   const [pattern, setPattern] = useState("");
 
@@ -80,27 +84,27 @@ export function TemplateEditorDialog({
     <Dialog open={open} onOpenChange={(open) => !open && onClose()}>
       <DialogContent className="sm:max-w-lg">
         <DialogHeader>
-          <DialogTitle>{template ? "Edit Template" : "New Template"}</DialogTitle>
+          <DialogTitle>{template ? t("templateEditor.editTitle") : t("templateEditor.newTitle")}</DialogTitle>
         </DialogHeader>
         <div className="space-y-4">
           <div className="space-y-2">
-            <Label>Template Name</Label>
+            <Label>{t("templateEditor.name")}</Label>
             <Input
               value={name}
               onChange={(e) => setName(e.target.value)}
-              placeholder="e.g. Weekly Report"
+              placeholder={t("templateEditor.namePlaceholder")}
             />
           </div>
           <div className="space-y-2">
-            <Label>Pattern</Label>
+            <Label>{t("templateEditor.pattern")}</Label>
             <Input
               value={pattern}
               onChange={(e) => setPattern(e.target.value)}
-              placeholder="e.g. {Date:YYYYMMDD}_{Input:topic}.{Ext}"
+              placeholder={t("templateEditor.patternPlaceholder")}
             />
           </div>
           <div className="space-y-2">
-            <Label className="text-xs text-muted-foreground">Available Variables (click to insert)</Label>
+            <Label className="text-xs text-muted-foreground">{t("templateEditor.availableVars")}</Label>
             <div className="flex flex-wrap gap-1.5">
               {VAR_HELP.map((v) => (
                 <button
@@ -108,7 +112,7 @@ export function TemplateEditorDialog({
                   type="button"
                   onClick={() => insertVar(v.var)}
                   className="rounded-md border border-border bg-muted/50 px-2 py-1 text-xs hover:bg-muted transition-colors"
-                  title={v.desc}
+                  title={t(v.descKey)}
                 >
                   {v.var}
                 </button>
@@ -118,10 +122,10 @@ export function TemplateEditorDialog({
         </div>
         <DialogFooter>
           <Button variant="outline" onClick={onClose}>
-            Cancel
+            {t("templateEditor.cancel")}
           </Button>
           <Button onClick={handleSave} disabled={!name.trim() || !pattern.trim()}>
-            Save
+            {t("templateEditor.save")}
           </Button>
         </DialogFooter>
       </DialogContent>

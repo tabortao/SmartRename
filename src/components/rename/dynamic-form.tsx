@@ -18,6 +18,12 @@ function getVarTypeLabel(varType: string, t: (key: string) => string): string {
   return translated === key ? varType : translated;
 }
 
+function getInputLabel(label: string, t: (key: string) => string): string {
+  const key = `template.inputLabels.${label}`;
+  const translated = t(key);
+  return translated === key ? label : translated;
+}
+
 export function DynamicForm({
   variables,
   varValues,
@@ -39,13 +45,14 @@ export function DynamicForm({
         const varType = v.varType.type;
 
         if (varType === "Input") {
-          const label = v.label || "value";
+          const rawLabel = v.label || "value";
+          const label = getInputLabel(rawLabel, t);
           return (
             <div key={index} className="flex items-center gap-3">
               <Label className="w-20 shrink-0 text-sm">{label}:</Label>
               <Input
-                value={varValues[label] || ""}
-                onChange={(e) => onVarChange(label, e.target.value)}
+                value={varValues[rawLabel] || ""}
+                onChange={(e) => onVarChange(rawLabel, e.target.value)}
                 placeholder={t("template.enterValue", { label })}
                 className="flex-1"
               />
@@ -58,11 +65,7 @@ export function DynamicForm({
         }
 
         // Built-in variables (Date, Time, Ext, ParentDir, OriginalName) - display only
-        const format = v.format;
-        let displayName = getVarTypeLabel(varType, t);
-        if (format) {
-          displayName = `${displayName} (${format})`;
-        }
+        const displayName = getVarTypeLabel(varType, t);
         return (
           <div key={index} className="flex items-center gap-3">
             <Label className="w-20 shrink-0 text-sm text-muted-foreground">{displayName}:</Label>

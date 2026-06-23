@@ -5,6 +5,12 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.1] - 2026-06-23
+
+### Fixed
+
+- Default templates `{Num:1}` / `{Num:01}` changed to `{Counter:1}` / `{Counter:01}` — `Num` was not a recognized variable type in the template engine
+
 ## [0.3.0] - 2026-06-22
 
 ### Added
@@ -34,7 +40,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `replaceFiles` now auto-restores last template from config instead of resetting to null
 - Chinese/English language switching: removed `LanguageDetector` plugin, replaced with manual `localStorage`-based language management
 - Stale event listener dependencies in `home.tsx` (`addFiles` replaced with `replaceFiles`)
-- Template selector and file list column headers now use i18n translations
+- File drag-drop support: listen for Tauri built-in `tauri://drag-drop` / `tauri://drag-drop-hover` / `tauri://drag-drop-leave` events with visual overlay
+- Template editor i18n: English/Chinese for all labels, placeholders, and variable descriptions
+- Version counter variables: `{Counter:01}` (01, 02...) and `v{Counter:01}` (v01, v02...) available in template editor
 
 ### Changed
 

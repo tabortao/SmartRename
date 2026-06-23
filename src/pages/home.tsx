@@ -40,6 +40,7 @@ export default function HomePage() {
 
   const [editorOpen, setEditorOpen] = useState(false);
   const [editingTemplate, setEditingTemplate] = useState<TemplateConfig | null>(null);
+  const [isDragOver, setIsDragOver] = useState(false);
 
   // Parse template variables for dynamic form
   const [templateVars, setTemplateVars] = useState<import("@/hooks/use-rename").TemplateVariable[]>([]);
@@ -85,10 +86,27 @@ export default function HomePage() {
       }
     });
 
+    // Drag-drop event listeners (Tauri built-in)
+    const unlistenFileDrop = listen<{ paths: string[] }>("tauri://drag-drop", (event) => {
+      if (event.payload.paths.length > 0) {
+        replaceFiles(event.payload.paths);
+      }
+      setIsDragOver(false);
+    });
+    const unlistenFileDropHover = listen<{ paths: string[] }>("tauri://drag-drop-hover", (event) => {
+      setIsDragOver(event.payload.paths.length > 0);
+    });
+    const unlistenFileDropLeave = listen<void>("tauri://drag-drop-leave", () => {
+      setIsDragOver(false);
+    });
+
     return () => {
       unlistenShortcutChanged.then((fn) => fn());
       unlistenLanguageChanged.then((fn) => fn());
       unlistenNewFiles.then((fn) => fn());
+      unlistenFileDrop.then((fn) => fn());
+      unlistenFileDropHover.then((fn) => fn());
+      unlistenFileDropLeave.then((fn) => fn());
     };
   }, [i18n, replaceFiles]);
 
@@ -183,10 +201,18 @@ export default function HomePage() {
   return (
     <WindowFrame
       titleBar={<MainTitleBar />}
-      contentClassName="flex flex-1 flex-col overflow-hidden"
+      contentClassName="flex flex-1 flex-col overflow-hidden relative"
     >
       <Toaster />
       <UpdaterDialog />
+
+      {isDragOver && (
+        <div className="absolute inset-0 z-50 flex items-center justify-center bg-primary/10 border-2 border-primary border-dashed rounded-lg pointer-events-none">
+          <span className="text-primary text-lg font-semibold drop-shadow">
+            {t("rename.dropFilesHere")}
+          </span>
+        </div>
+      )}
 
       <TemplateSelector
         templates={templates}
