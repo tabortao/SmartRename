@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
+import { invoke } from "@tauri-apps/api/core";
 import { emit } from "@tauri-apps/api/event";
+import { listen } from "@tauri-apps/api/event";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { useTheme } from "@/components/theme-provider";
@@ -7,35 +9,82 @@ import { TitleBar } from "@/components/title-bar";
 import { WindowFrame } from "@/components/window-frame";
 import { LanguageToggle } from "@/components/language-toggle";
 import { ShortcutInput } from "@/components/shortcut-input";
-import { Moon, Sun, Monitor, Palette, Keyboard } from "lucide-react";
+import { TemplateEditorDialog } from "@/components/rename/template-editor-dialog";
+import { Moon, Sun, Monitor, Palette, Keyboard, FileText } from "lucide-react";
 import { registerShortcut, unregisterShortcut } from "@/lib/shortcut";
 import { toggleWindow } from "@/lib/window";
 import { toast } from "sonner";
 import { Toaster } from "@/components/ui/sonner";
-import { useAppTranslation } from "@/hooks/use-app-translation";
+import { useTranslation } from "react-i18next";
+import type { TemplateConfig } from "@/hooks/use-rename";
 
 const SHORTCUT_KEY = "global-shortcut-show-main";
 
-type SettingSection = "appearance" | "shortcut";
+type SettingSection = "appearance" | "shortcut" | "templates";
 
 export default function SettingsPage() {
   const [shortcut, setShortcut] = useState<string>("");
   const [activeSection, setActiveSection] = useState<SettingSection>("appearance");
-  const { t } = useAppTranslation();
+  const { t, i18n } = useTranslation();
   const { theme, setTheme } = useTheme();
+
+  // Template management state
+  const [templates, setTemplates] = useState<TemplateConfig[]>([]);
+  const [editorOpen, setEditorOpen] = useState(false);
+  const [editingTemplate, setEditingTemplate] = useState<TemplateConfig | null>(null);
+  const [contextMenuInstalled, setContextMenuInstalled] = useState(false);
 
   const handleShowMainWindow = useCallback(async () => {
     await toggleWindow("main");
   }, []);
 
   useEffect(() => {
-    // Load saved shortcut
     const savedShortcut = localStorage.getItem(SHORTCUT_KEY);
     if (savedShortcut) {
       setShortcut(savedShortcut);
       registerShortcut(savedShortcut, handleShowMainWindow);
     }
   }, [handleShowMainWindow]);
+
+  // Load templates and context menu status
+  useEffect(() => {
+    const loadTemplates = async () => {
+      try {
+        const list = await invoke<TemplateConfig[]>("get_templates");
+        setTemplates(list);
+      } catch (error) {
+        console.error("Failed to load templates:", error);
+      }
+    };
+    const checkContextMenu = async () => {
+      try {
+        const installed = await invoke<boolean>("is_context_menu_installed");
+        setContextMenuInstalled(installed);
+      } catch (error) {
+        console.error("Failed to check context menu:", error);
+      }
+    };
+    loadTemplates();
+    checkContextMenu();
+  }, []);
+
+  const reloadTemplates = useCallback(async () => {
+    try {
+      const list = await invoke<TemplateConfig[]>("get_templates");
+      setTemplates(list);
+    } catch (error) {
+      console.error("Failed to reload templates:", error);
+    }
+  }, []);
+
+  useEffect(() => {
+    const unlistenLanguageChanged = listen<{ language: string }>("language-changed", (event) => {
+      i18n.changeLanguage(event.payload.language);
+    });
+    return () => {
+      unlistenLanguageChanged.then((fn) => fn());
+    };
+  }, [i18n]);
 
   const handleShortcutChange = async (newShortcut: string) => {
     const oldShortcut = shortcut;
@@ -44,7 +93,6 @@ export default function SettingsPage() {
     if (newShortcut) {
       localStorage.setItem(SHORTCUT_KEY, newShortcut);
       await registerShortcut(newShortcut, handleShowMainWindow, oldShortcut);
-      // Notify main window to update shortcut
       await emit("shortcut-changed", { shortcut: newShortcut });
       toast.success(t("settings.shortcut.setSuccess", { shortcut: newShortcut }));
     } else {
@@ -52,23 +100,51 @@ export default function SettingsPage() {
       if (oldShortcut) {
         await unregisterShortcut(oldShortcut);
       }
-      // Notify main window to clear shortcut
       await emit("shortcut-changed", { shortcut: "" });
       toast.info(t("settings.shortcut.cleared"));
     }
   };
 
+  const handleNewTemplate = () => {
+    setEditingTemplate(null);
+    setEditorOpen(true);
+  };
+
+  const handleEditTemplate = (template: TemplateConfig) => {
+    setEditingTemplate(template);
+    setEditorOpen(true);
+  };
+
+  const handleDeleteTemplate = async (id: string) => {
+    try {
+      await invoke("delete_template", { id });
+      await reloadTemplates();
+      toast.success("Template deleted");
+    } catch (error) {
+      toast.error("Failed to delete template");
+    }
+  };
+
+  const handleToggleContextMenu = async () => {
+    try {
+      if (contextMenuInstalled) {
+        await invoke("uninstall_context_menu");
+        setContextMenuInstalled(false);
+        toast.success("Context menu uninstalled");
+      } else {
+        await invoke("install_context_menu");
+        setContextMenuInstalled(true);
+        toast.success("Context menu installed");
+      }
+    } catch (error) {
+      toast.error("Failed to toggle context menu");
+    }
+  };
+
   const menuItems = [
-    {
-      id: "appearance" as SettingSection,
-      label: t("settings.appearance.title"),
-      icon: Palette,
-    },
-    {
-      id: "shortcut" as SettingSection,
-      label: t("settings.shortcut.title"),
-      icon: Keyboard,
-    },
+    { id: "appearance" as SettingSection, label: t("settings.appearance.title"), icon: Palette },
+    { id: "shortcut" as SettingSection, label: t("settings.shortcut.title"), icon: Keyboard },
+    { id: "templates" as SettingSection, label: t("settings.templates.title"), icon: FileText },
   ];
 
   return (
@@ -177,8 +253,79 @@ export default function SettingsPage() {
               </div>
             </div>
           )}
+
+          {activeSection === "templates" && (
+            <div className="space-y-4">
+              <div>
+                <h2 className="mb-1 text-lg font-semibold">{t("settings.templates.title")}</h2>
+                <p className="text-muted-foreground text-sm">
+                  {t("settings.templates.description")}
+                </p>
+              </div>
+
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <Button onClick={handleNewTemplate} size="sm">
+                    {t("settings.templates.newTemplate")}
+                  </Button>
+                  <Button
+                    variant={contextMenuInstalled ? "destructive" : "outline"}
+                    onClick={handleToggleContextMenu}
+                    size="sm"
+                  >
+                    {contextMenuInstalled
+                      ? t("settings.templates.uninstallContextMenu")
+                      : t("settings.templates.installContextMenu")}
+                  </Button>
+                </div>
+
+                {templates.length === 0 ? (
+                  <p className="text-muted-foreground py-4 text-center text-sm">
+                    {t("settings.templates.noTemplates")}
+                  </p>
+                ) : (
+                  <div className="space-y-2">
+                    {templates.map((tmpl) => (
+                      <div
+                        key={tmpl.id}
+                        className="border-border flex items-center justify-between rounded-lg border p-3"
+                      >
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium truncate">{tmpl.name}</p>
+                          <p className="text-muted-foreground truncate text-xs">{tmpl.pattern}</p>
+                        </div>
+                        <div className="ml-3 flex gap-1 shrink-0">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleEditTemplate(tmpl)}
+                          >
+                            {t("settings.templates.edit")}
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleDeleteTemplate(tmpl.id)}
+                          >
+                            {t("settings.templates.delete")}
+                          </Button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
         </div>
       </div>
+
+      <TemplateEditorDialog
+        open={editorOpen}
+        template={editingTemplate}
+        onClose={() => setEditorOpen(false)}
+        onSaved={reloadTemplates}
+      />
     </WindowFrame>
   );
 }

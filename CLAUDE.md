@@ -1,8 +1,8 @@
-# Tauri App Template
+# SmartRename
 
 ## Project Overview
 
-Modern desktop application template built with Tauri v2 + React 19 + TypeScript + shadcn/ui.
+Smart file rename tool with customizable templates, batch processing, and Windows context menu integration. Built with Tauri v2 + React 19 + TypeScript + shadcn/ui.
 
 ## Architecture
 
@@ -15,7 +15,7 @@ Modern desktop application template built with Tauri v2 + React 19 + TypeScript 
 | Module | Path | Tech Stack | Responsibility |
 |--------|------|------------|----------------|
 | Frontend | `src/` | TypeScript/React | UI, components, styles, i18n |
-| Backend | `src-tauri/` | Rust | System calls, native features |
+| Backend | `src-tauri/` | Rust | Template engine, file rename, context menu, system tray |
 | Documentation | `docs/` | Markdown | Project guides and references |
 
 ## Development
@@ -149,44 +149,17 @@ See [I18N Documentation](./docs/I18N.md) for detailed usage.
 The project uses sonner (via shadcn/ui) for toast notifications:
 
 ```typescript
-// Import toast function
 import { toast } from "sonner";
 
-// Show success toast
 toast.success("Operation completed!");
-
-// Show error toast
 toast.error("Something went wrong!");
-
-// Show info toast
 toast.info("Information message");
-
-// Show warning toast
 toast.warning("Warning message");
-
-// With i18n support
-import { useTranslation } from "react-i18next";
-const { t } = useTranslation();
-toast.success(t("settings.shortcut.setSuccess", { shortcut: "Ctrl+Shift+A" }));
 ```
 
 **Setup Requirements**:
 1. Add `<Toaster />` component to your page/app root
 2. Import from `@/components/ui/sonner`
-
-**Example**:
-```typescript
-import { Toaster } from "@/components/ui/sonner";
-
-export default function Settings() {
-  return (
-    <ThemeProvider>
-      <Toaster />
-      <SettingsContent />
-    </ThemeProvider>
-  );
-}
-```
 
 **Features**:
 - Auto-adapts to light/dark theme
@@ -200,25 +173,41 @@ export default function Settings() {
 
 ### Responsibilities
 
-System-level calls, native features, cross-platform desktop app wrapper.
+Template engine, file batch renaming, Windows context menu integration, system tray, global shortcuts.
 
 ### Entry Points
 
 - **Entry**: `src-tauri/src/main.rs`
 - **App Logic**: `src-tauri/src/lib.rs`
+- **Rename Module**: `src-tauri/src/rename/` (template engine, file utils, commands, context menu)
 - **Build Config**: `Cargo.toml`
 
 ### Commands
 
 | Command | Parameters | Returns | Description |
 |---------|------------|---------|-------------|
-| `greet` | `name: &str` | `String` | Example greeting command |
+| `parse_cli_args` | - | `Vec<String>` | Parse file paths from CLI args |
+| `parse_template` | `pattern: String` | `Vec<TemplateVariable>` | Parse template pattern into variables |
+| `preview_rename` | `files, pattern, varValues, counterStart` | `Vec<PreviewItem>` | Preview rename results |
+| `apply_rename` | `files, pattern, varValues, counterStart` | `Vec<RenameResult>` | Execute file rename |
+| `get_templates` | - | `Vec<TemplateConfig>` | Get all templates |
+| `save_template` | `template: TemplateConfig` | `Result<(), String>` | Save/update template |
+| `delete_template` | `id: String` | `Result<(), String>` | Delete template |
+| `install_context_menu` | - | `Result<(), String>` | Install Windows context menu |
+| `uninstall_context_menu` | - | `Result<(), String>` | Uninstall Windows context menu |
+| `is_context_menu_installed` | - | `bool` | Check context menu status |
 
 ### Key Dependencies
 
 - tauri@2 - Tauri framework
 - tauri-plugin-opener@2 - Open external links
+- tauri-plugin-global-shortcut@2 - Global shortcuts
+- tauri-plugin-single-instance@2 - Single instance
 - serde@1, serde_json@1 - Serialization
+- regex@1 - Template parsing
+- chrono@0.4 - Date/time formatting
+- uuid@1 - Template ID generation
+- winreg@0.52 - Windows registry (context menu)
 
 ### Configuration
 
@@ -226,8 +215,8 @@ System-level calls, native features, cross-platform desktop app wrapper.
 - `capabilities/default.json` - Permissions config
 
 **Key Settings**:
-- Product: `tauri-app-template`
-- Identifier: `com.template.tauri-app`
+- Product: `smart-rename`
+- Identifier: `com.smartrename.app`
 - Window: 800x600
 - Dev Port: 1420
 
@@ -240,6 +229,8 @@ System-level calls, native features, cross-platform desktop app wrapper.
 - **AUTO_UPDATE.md** - Tauri auto-update configuration and GitHub Actions setup
 - **I18N.md** - Internationalization guide (English)
 - **I18N.zh-CN.md** - 国际化指南（中文）
+- **GLOBAL_SHORTCUT.md** - Global shortcut documentation
+- **TAURI_TEMPLATE_PITFALLS.zh-CN.md** - Tauri template troubleshooting
 
 ### Adding Documentation
 
