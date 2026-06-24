@@ -7,9 +7,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [0.3.1] - 2026-06-23
 
+### Added
+
+- Bilingual template names: `name_zh` / `name_en` fields in TemplateConfig, auto-display based on UI language
+- New template: 日期_原文件名_版本 (Date_OriginalName_Version) — `{Date:YYYYMMDD}_{OriginalName}_V{Input:版本号}.{Ext}`
+- Version number defaults to "1" when template contains `{Input:版本号}`
+- Multi-file right-click context menu support (changed `%1` to `%*` in registry command)
+- New document organizer default templates with Chinese names: 日期_主题, 日期_主题_版本, 日期_主题-备注, 日期_主题-备注_版本, 序号_名称
+- Template formula `{Date:YYYYMMDD}_{Input:主题}-{Input:备注}_V{Input:版本号}.{Ext}` for full document management (e.g. `20260315_季度总结报告-市场部_V2.1.docx`)
+- Input label i18n mappings for Chinese labels (主题→Topic, 备注→Note, 版本号→Version, 核心信息→Core Info)
+- Comprehensive README.md and README.zh-CN.md with usage guide, template syntax table, and project structure
+- UI polish: colored rename button (emerald), variable type icons in dynamic form, file icons in list headers, improved drag-drop overlay
+
+### Changed
+
+- Template editor dialog now supports separate Chinese and English name fields
+- Renamed "模板模式" → "模板公式" (zh) and "Pattern" → "Template Formula" (en) in template editor UI
+- Default template names now use descriptive Chinese labels instead of raw formula strings
+- All default template separators changed from `-` to `_` for consistency with document management conventions
+
 ### Fixed
 
 - Default templates `{Num:1}` / `{Num:01}` changed to `{Counter:1}` / `{Counter:01}` — `Num` was not a recognized variable type in the template engine
+- Right-click context menu now supports multiple file selection (registry command changed from `%1` to `%*`)
 
 ## [0.3.0] - 2026-06-22
 

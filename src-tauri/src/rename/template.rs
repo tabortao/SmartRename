@@ -10,6 +10,10 @@ use super::file_utils;
 pub struct TemplateConfig {
     pub id: String,
     pub name: String,
+    #[serde(default)]
+    pub name_zh: String,
+    #[serde(default)]
+    pub name_en: String,
     pub pattern: String,
     pub created_at: String,
     pub updated_at: String,
@@ -94,6 +98,18 @@ pub fn parse_template(pattern: &str) -> Vec<TemplateVariable> {
     vars
 }
 
+/// Convert user-friendly date/time format to chrono format specifiers
+/// e.g. "YYYYMMDD" → "%Y%m%d", "YYYY-MM-DD HH:mm" → "%Y-%m-%d %H:%M"
+fn convert_date_format(user_format: &str) -> String {
+    user_format
+        .replace("YYYY", "%Y")
+        .replace("MM", "%m")
+        .replace("DD", "%d")
+        .replace("HH", "%H")
+        .replace("mm", "%M")
+        .replace("SS", "%S")
+}
+
 /// Render a single filename from a template, variable values, and counter
 pub fn render_filename(
     template: &str,
@@ -115,11 +131,13 @@ pub fn render_filename(
         match var_name {
             "Date" => {
                 let fmt = arg.unwrap_or("%Y%m%d");
-                now.format(fmt).to_string()
+                let chrono_fmt = convert_date_format(fmt);
+                now.format(&chrono_fmt).to_string()
             }
             "Time" => {
                 let fmt = arg.unwrap_or("%H%M%S");
-                now.format(fmt).to_string()
+                let chrono_fmt = convert_date_format(fmt);
+                now.format(&chrono_fmt).to_string()
             }
             "Ext" => ext.to_string(),
             "ParentDir" => parent_dir.to_string(),
@@ -240,6 +258,35 @@ mod tests {
             r"C:\test\report.txt",
         );
         assert_eq!(result, "20260622_周报.txt");
+    }
+
+    #[test]
+    fn test_render_filename_with_date_format() {
+        let vars = HashMap::new();
+        let result = render_filename(
+            "{Date:YYYYMMDD}.{Ext}",
+            &vars,
+            1,
+            r"C:\test\notes.txt",
+        );
+        // Should render today's date in YYYYMMDD format, not the literal "YYYYMMDD"
+        let today = Local::now().format("%Y%m%d").to_string();
+        assert_eq!(result, format!("{}.txt", today));
+    }
+
+    #[test]
+    fn test_render_filename_with_time_format() {
+        let vars = HashMap::new();
+        let result = render_filename(
+            "{Date:YYYY-MM-DD}_{Time:HH-mm-SS}.{Ext}",
+            &vars,
+            1,
+            r"C:\test\log.txt",
+        );
+        // Should render actual date and time, not the literal format strings
+        assert!(!result.contains("YYYY"));
+        assert!(!result.contains("HH-mm-SS"));
+        assert!(result.ends_with(".txt"));
     }
 
     #[test]

@@ -8,6 +8,7 @@ import {
 import { ChevronDown, Plus, Pencil, Trash2 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import type { TemplateConfig } from "@/hooks/use-rename";
+import { getTemplateDisplayName } from "@/hooks/use-rename";
 
 interface TemplateSelectorProps {
   templates: TemplateConfig[];
@@ -26,7 +27,7 @@ export function TemplateSelector({
   onEdit,
   onDelete,
 }: TemplateSelectorProps) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
 
   return (
     <div className="flex items-center gap-2 px-4 py-2">
@@ -35,7 +36,9 @@ export function TemplateSelector({
         <DropdownMenuTrigger asChild>
           <Button variant="outline" className="flex-1 justify-between">
             <span className="truncate">
-              {selected ? selected.name : t("template.selectPlaceholder")}
+              {selected
+                ? getTemplateDisplayName(selected, i18n.language)
+                : t("template.selectPlaceholder")}
             </span>
             <ChevronDown className="ml-2 h-4 w-4 shrink-0" />
           </Button>
@@ -46,7 +49,7 @@ export function TemplateSelector({
           </DropdownMenuItem>
           {templates.map((tpl) => (
             <DropdownMenuItem key={tpl.id} onClick={() => onSelect(tpl)}>
-              {tpl.name}
+              {getTemplateDisplayName(tpl, i18n.language)}
             </DropdownMenuItem>
           ))}
         </DropdownMenuContent>

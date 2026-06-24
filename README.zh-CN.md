@@ -1,6 +1,6 @@
 <div align="center">
 
-# Tauri App Template
+# SmartRename
 
 [English](./README.md) | 简体中文
 
@@ -9,32 +9,33 @@
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.6-3178C6?logo=typescript)](https://www.typescriptlang.org/)
 [![License](https://img.shields.io/badge/License-MIT-green)](./LICENSE)
 
-基于 Tauri v2 + React 19 + TypeScript + shadcn/ui 的桌面应用模板。
+智能文件重命名工具，支持自定义模板公式、批量处理和 Windows 右键菜单集成。
 
 </div>
 
-## 预览
+## 功能特性
 
-![应用截图](./screenshots/app.png)
-
-## 特点
-
-- ✨ **现代化技术栈** - Tauri v2 + React 19 + TypeScript + Vite
-- 🎨 **精美 UI 组件** - 集成 shadcn/ui 组件库和 Tailwind CSS v4
-- 🌓 **暗色模式支持** - 内置亮色/暗色主题切换
-- 🌍 **国际化支持** - 集成 i18next，支持中英文切换
-- 🖼️ **自定义标题栏** - 无边框透明窗口，支持拖拽、最小化、最大化、关闭
-- 🗂️ **多窗口管理** - 支持创建子窗口、窗口生命周期管理、延迟销毁机制
-- 🔔 **系统托盘集成** - 支持托盘图标、菜单和窗口隐藏/显示
-- ⌨️ **全局快捷键** - 支持注册全局快捷键，应用未聚焦时也能响应
-- 🔄 **自动发布与更新** - 支持基于 `vX.Y.Z` 标签的 GitHub Actions 自动构建、Release 发布与自动更新
-- 📦 **开箱即用** - 预配置 Prettier、ESLint 和 TypeScript 严格模式
-- 🚀 **快速开发** - Vite HMR + Tauri 热重载
+- **模板引擎** — 强大的命名公式，支持变量：`{Date}`、`{Time}`、`{Ext}`、`{ParentDir}`、`{OriginalName}`、`{Input:xxx}`、`{Counter}`
+- **批量重命名** — 通过右键菜单或拖拽选取多个文件，一键批量重命名
+- **实时预览** — 应用前实时预览重命名结果，自动检测文件名冲突
+- **内置模板** — 开箱即用的资料整理模板：
+  - `日期_主题` — `20260315_季度总结报告.docx`
+  - `日期_主题_版本` — `20260315_季度总结报告_V2.1.docx`
+  - `日期_主题-备注` — `20260315_季度总结报告-市场部.docx`
+  - `日期_主题-备注_版本` — `20260315_季度总结报告-市场部_V2.1.docx`
+  - `序号_名称` — `01_会议纪要.docx`
+- **自定义模板** — 创建、编辑、删除自己的命名公式
+- **右键菜单集成** — 在 Windows 资源管理器中右键任意文件，选择「Smart Rename」
+- **拖拽支持** — 直接将文件拖入窗口即可快速重命名
+- **国际化** — 完整的中英文界面支持
+- **暗色模式** — 亮色/暗色主题，支持跟随系统
+- **系统托盘** — 最小化到系统托盘，快速访问
+- **全局快捷键** — 可配置的快捷键显示/隐藏主窗口
 
 ## 技术栈
 
 - **桌面框架**: [Tauri v2](https://tauri.app/)
-- **前端框架**: [React 19](https://react.dev/) + [TypeScript](https://www.typescriptlang.org/)
+- **前端**: [React 19](https://react.dev/) + [TypeScript](https://www.typescriptlang.org/)
 - **构建工具**: [Vite](https://vite.dev/)
 - **UI 组件**: [shadcn/ui](https://ui.shadcn.com/)
 - **样式方案**: [Tailwind CSS v4](https://tailwindcss.com/)
@@ -66,45 +67,39 @@ pnpm tauri dev
 pnpm tauri build
 ```
 
-### 版本管理
+## 使用指南
 
-`pnpm release:version` 是版本发布的唯一入口。
+### 快速上手
 
-```bash
-pnpm release:version
-pnpm release:version --lang zh
-pnpm release:version --lang en
-```
+1. 在 Windows 资源管理器中右键选中一个或多个文件，点击 **Smart Rename**
+2. 从下拉菜单选择一个模板
+3. 填写输入字段（如主题、备注、版本号）
+4. 查看预览结果
+5. 点击 **重命名** 应用
 
-它会交互式完成发布前检查和版本更新流程：
-- 确保工作区干净
-- 强制要求当前分支为 `main`
-- 校验 `package.json`、`src-tauri/tauri.conf.json` 和 `src-tauri/Cargo.toml` 的版本一致
-- 检查目标 tag 是否已在本地或远端 `origin` 存在
-- 同步更新这三个版本文件
-- 创建发布提交和 `vX.Y.Z` tag
-- 可选地推送分支和 tag
+### 模板公式语法
 
-## 添加 shadcn/ui 组件
+| 变量 | 说明 | 示例输出 |
+|------|------|----------|
+| `{Date}` | 当前日期（默认格式：YYYYMMDD） | `20260315` |
+| `{Date:YYYY-MM-DD}` | 自定义格式日期 | `2026-03-15` |
+| `{Time}` | 当前时间（默认格式：HHMMSS） | `143025` |
+| `{Time:HH-mm}` | 自定义格式时间 | `14-30` |
+| `{Ext}` | 文件扩展名 | `.docx` |
+| `{ParentDir}` | 父目录名称 | `Reports` |
+| `{OriginalName}` | 原文件名（不含扩展名） | `draft` |
+| `{Input:主题}` | 用户输入字段 | `季度总结报告` |
+| `{Counter}` | 自动递增计数器（1, 2, 3...） | `1` |
+| `{Counter:001}` | 填充计数器（001, 002...） | `001` |
+| `{Counter:01}` | 数字计数器（01, 02...） | `01` |
+| `v{Counter:01}` | 版本计数器（v01, v02...） | `v01` |
 
-```bash
-pnpm dlx shadcn@latest add <component-name>
-```
+### 创建自定义模板
 
-示例：
-
-```bash
-pnpm dlx shadcn@latest add button
-pnpm dlx shadcn@latest add input
-pnpm dlx shadcn@latest add dialog
-```
-
-## 代码格式化
-
-```bash
-pnpm format        # 格式化代码
-pnpm format:check  # 检查代码格式
-```
+1. 打开 **设置** → **模板管理**
+2. 点击 **新建模板**
+3. 输入模板名称和公式（如 `{Date:YYYYMMDD}_{Input:主题}.{Ext}`）
+4. 点击 **保存**
 
 ## 项目结构
 
@@ -112,72 +107,37 @@ pnpm format:check  # 检查代码格式
 .
 ├── src/                    # 前端源码
 │   ├── components/         # React 组件
-│   │   └── ui/            # shadcn/ui 组件
-│   ├── i18n/              # 国际化
-│   │   ├── index.ts       # i18n 配置
-│   │   └── locales/       # 翻译文件
-│   ├── lib/               # 工具函数
-│   ├── pages/             # 页面组件
-│   │   ├── home.tsx       # 主窗口页面
-│   │   ├── about.tsx      # 关于窗口页面
-│   │   └── settings.tsx   # 设置窗口页面
-│   └── main.tsx           # 前端入口和基于 pathname 的页面选择器
-├── src-tauri/             # Tauri/Rust 后端
-│   ├── src/               # Rust 源码
-│   └── tauri.conf.json    # Tauri 配置
-├── docs/                  # 文档
-│   ├── AUTO_UPDATE.zh-CN.md # 自动更新指南
-│   ├── I18N.zh-CN.md      # 国际化指南
-│   └── GLOBAL_SHORTCUT.zh-CN.md # 全局快捷键指南
-├── components.json        # shadcn/ui 配置
+│   │   ├── rename/         # 重命名相关组件
+│   │   └── ui/             # shadcn/ui 组件
+│   ├── hooks/              # React Hooks（use-rename）
+│   ├── i18n/               # 国际化
+│   │   ├── index.ts        # i18n 配置
+│   │   └── locales/        # 翻译文件（en, zh）
+│   ├── lib/                # 工具函数
+│   ├── pages/              # 页面组件
+│   │   ├── home.tsx        # 主窗口（重命名页面）
+│   │   ├── about.tsx       # 关于页面
+│   │   └── settings.tsx    # 设置页面
+│   └── main.tsx            # 前端入口
+├── src-tauri/              # Tauri/Rust 后端
+│   ├── src/
+│   │   ├── lib.rs          # 应用入口、托管状态、插件配置
+│   │   ├── main.rs         # 二进制入口
+│   │   ├── plugins/        # 系统托盘插件
+│   │   └── rename/         # 重命名引擎
+│   │       ├── commands.rs # Tauri 命令
+│   │       ├── context_menu.rs # Windows 右键菜单
+│   │       ├── file_utils.rs   # 文件路径工具
+│   │       └── template.rs     # 模板解析与渲染
+│   └── tauri.conf.json     # Tauri 配置
+├── docs/                   # 文档
+│   ├── ChangeLog.md        # 更新日志
+│   ├── I18N.md             # 国际化指南
+│   └── GLOBAL_SHORTCUT.md  # 全局快捷键指南
 └── package.json
 ```
 
-## CI/CD
-
-本项目使用 GitHub Actions 实现自动化构建和发布。
-
-### 自动化发布
-
-工作流会在推送符合 `v*` 格式的标签时触发，例如 `v0.1.0`。
-推荐通过 `pnpm release:version` 发版，它会自动创建匹配的 `vX.Y.Z` tag。
-
-**手动创建并推送标签示例：**
-```bash
-git tag v0.1.0
-git push origin v0.1.0
-```
-
-### 构建产物
-
-工作流会生成：
-- **NSIS 安装包** - Windows 安装程序
-- **更新文件** - `latest.json` 用于自动更新支持
-
-### 自动更新配置
-
-要启用自动更新功能，需要：
-
-1. 生成签名密钥：`pnpm tauri signer generate -w ~/.tauri/myapp.key`
-2. 添加 GitHub Secrets：`TAURI_SIGNING_PRIVATE_KEY` 和 `TAURI_SIGNING_PRIVATE_KEY_PASSWORD`
-
-**注意：** `src-tauri/tauri.conf.json` 中的公钥和更新端点占位符会在发布构建期间由 GitHub Actions 自动替换。自动更新依赖已发布的 GitHub Release 对外提供最新版本的 `latest.json` 资源。
-
-详细配置说明请查看 [自动更新配置文档](./docs/AUTO_UPDATE.zh-CN.md)。
-
-### 代码签名（可选）
-
-如需启用代码签名，在 GitHub 仓库设置中添加以下 Secrets：
-- `TAURI_SIGNING_PRIVATE_KEY` - 私钥内容
-- `TAURI_SIGNING_PRIVATE_KEY_PASSWORD` - 私钥密码
-
-不配置这些 Secrets 也能正常构建，只是安装包不会被签名。
-
-### 多平台支持
-
-如需启用 macOS 和 Linux 构建，取消 `.github/workflows/release.yml` 中对应平台配置的注释即可。
-
-## IDE 推荐
+## 推荐 IDE
 
 - [VS Code](https://code.visualstudio.com/)
 - [Tauri](https://marketplace.visualstudio.com/items?itemName=tauri-apps.tauri-vscode)
@@ -186,7 +146,3 @@ git push origin v0.1.0
 ## License
 
 MIT
-
-## Star History
-
-[![Star History Chart](https://api.star-history.com/svg?repos=kitlib/tauri-app-template&type=Date)](https://star-history.com/#kitlib/tauri-app-template&Date)

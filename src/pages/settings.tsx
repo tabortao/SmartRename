@@ -17,6 +17,7 @@ import { toast } from "sonner";
 import { Toaster } from "@/components/ui/sonner";
 import { useTranslation } from "react-i18next";
 import type { TemplateConfig } from "@/hooks/use-rename";
+import { getTemplateDisplayName } from "@/hooks/use-rename";
 
 const SHORTCUT_KEY = "global-shortcut-show-main";
 
@@ -291,7 +292,7 @@ export default function SettingsPage() {
                         className="border-border flex items-center justify-between rounded-lg border p-3"
                       >
                         <div className="flex-1 min-w-0">
-                          <p className="text-sm font-medium truncate">{tmpl.name}</p>
+                          <p className="text-sm font-medium truncate">{getTemplateDisplayName(tmpl, i18n.language)}</p>
                           <p className="text-muted-foreground truncate text-xs">{tmpl.pattern}</p>
                         </div>
                         <div className="ml-3 flex gap-1 shrink-0">

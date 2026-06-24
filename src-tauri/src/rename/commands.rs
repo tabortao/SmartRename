@@ -66,33 +66,72 @@ fn get_templates_path(app: &AppHandle) -> Result<PathBuf, String> {
 }
 
 /// System default templates — always seeded on first run or migrated
+/// Designed as a document organizer's toolkit for efficient file naming
 fn get_default_templates() -> Vec<TemplateConfig> {
     vec![
+        // 1. 日期_主题 / Date_Topic
+        // Example: 20260624_季度总结报告.docx
         TemplateConfig {
             id: uuid::Uuid::new_v4().to_string(),
-            name: "{Date:YYYYMMDD}-{Input:topic}.{Ext}".to_string(),
-            pattern: "{Date:YYYYMMDD}-{Input:topic}.{Ext}".to_string(),
+            name: "日期_主题".to_string(),
+            name_zh: "日期_主题".to_string(),
+            name_en: "Date_Topic".to_string(),
+            pattern: "{Date:YYYYMMDD}_{Input:主题}.{Ext}".to_string(),
             created_at: chrono::Local::now().to_rfc3339(),
             updated_at: chrono::Local::now().to_rfc3339(),
         },
+        // 2. 日期_主题_版本 / Date_Topic_Version
+        // Example: 20260624_季度总结报告_v2.1.docx
         TemplateConfig {
             id: uuid::Uuid::new_v4().to_string(),
-            name: "{Date:YYYYMMDD}-{Input:topic}-V{Counter:1}.{Ext}".to_string(),
-            pattern: "{Date:YYYYMMDD}-{Input:topic}-V{Counter:1}.{Ext}".to_string(),
+            name: "日期_主题_版本".to_string(),
+            name_zh: "日期_主题_版本".to_string(),
+            name_en: "Date_Topic_Version".to_string(),
+            pattern: "{Date:YYYYMMDD}_{Input:主题}_v{Input:版本号}.{Ext}".to_string(),
             created_at: chrono::Local::now().to_rfc3339(),
             updated_at: chrono::Local::now().to_rfc3339(),
         },
+        // 3. 日期_主题-备注 / Date_Topic-Note
+        // Example: 20260624_季度总结报告-市场部.docx
         TemplateConfig {
             id: uuid::Uuid::new_v4().to_string(),
-            name: "{Counter:01}-{Input:name}.{Ext}".to_string(),
-            pattern: "{Counter:01}-{Input:name}.{Ext}".to_string(),
+            name: "日期_主题-备注".to_string(),
+            name_zh: "日期_主题-备注".to_string(),
+            name_en: "Date_Topic-Note".to_string(),
+            pattern: "{Date:YYYYMMDD}_{Input:主题}-{Input:备注}.{Ext}".to_string(),
             created_at: chrono::Local::now().to_rfc3339(),
             updated_at: chrono::Local::now().to_rfc3339(),
         },
+        // 4. 日期_主题-备注_版本 / Date_Topic-Note_Version
+        // Example: 20260624_季度总结报告-市场部_v2.1.docx
         TemplateConfig {
             id: uuid::Uuid::new_v4().to_string(),
-            name: "{Input:name}-{Date:YYYYMMDD}.{Ext}".to_string(),
-            pattern: "{Input:name}-{Date:YYYYMMDD}.{Ext}".to_string(),
+            name: "日期_主题-备注_版本".to_string(),
+            name_zh: "日期_主题-备注_版本".to_string(),
+            name_en: "Date_Topic-Note_Version".to_string(),
+            pattern: "{Date:YYYYMMDD}_{Input:主题}-{Input:备注}_v{Input:版本号}.{Ext}".to_string(),
+            created_at: chrono::Local::now().to_rfc3339(),
+            updated_at: chrono::Local::now().to_rfc3339(),
+        },
+        // 5. 序号_名称 / Number_Name
+        // Example: 01_会议纪要.docx
+        TemplateConfig {
+            id: uuid::Uuid::new_v4().to_string(),
+            name: "序号_名称".to_string(),
+            name_zh: "序号_名称".to_string(),
+            name_en: "Number_Name".to_string(),
+            pattern: "{Counter:01}_{Input:名称}.{Ext}".to_string(),
+            created_at: chrono::Local::now().to_rfc3339(),
+            updated_at: chrono::Local::now().to_rfc3339(),
+        },
+        // 6. 日期_原文件名_版本 / Date_OriginalName_Version
+        // Example: 20260624_draft_v1.0.docx
+        TemplateConfig {
+            id: uuid::Uuid::new_v4().to_string(),
+            name: "日期_原文件名_版本".to_string(),
+            name_zh: "日期_原文件名_版本".to_string(),
+            name_en: "Date_OriginalName_Version".to_string(),
+            pattern: "{Date:YYYYMMDD}_{OriginalName}_v{Input:版本号}.{Ext}".to_string(),
             created_at: chrono::Local::now().to_rfc3339(),
             updated_at: chrono::Local::now().to_rfc3339(),
         },
@@ -112,12 +151,28 @@ fn load_templates(app: &AppHandle) -> Result<Vec<TemplateConfig>, String> {
     let mut templates: Vec<TemplateConfig> =
         serde_json::from_str(&content).map_err(|e| format!("Failed to parse templates: {}", e))?;
 
+    // Cleanup: remove old templates with raw formula names (e.g. "{Date:YYYYMMDD}-{Input:topic}.{Ext}")
+    let before = templates.len();
+    templates.retain(|t| !t.name.starts_with('{') || !t.name.contains(":}"));
+    let mut changed = before != templates.len();
+
     // Migrate: add missing system default templates
     let defaults = get_default_templates();
-    let mut changed = false;
     for default in &defaults {
         if !templates.iter().any(|t| t.name == default.name) {
             templates.push(default.clone());
+            changed = true;
+        }
+    }
+    // Also update existing templates that have old patterns (V→v, YYYYMMDD→YYYYMMDD)
+    for t in &mut templates {
+        let mut updated = false;
+        if t.pattern.contains("_V{") {
+            t.pattern = t.pattern.replace("_V{", "_v{");
+            updated = true;
+        }
+        if updated {
+            t.updated_at = chrono::Local::now().to_rfc3339();
             changed = true;
         }
     }

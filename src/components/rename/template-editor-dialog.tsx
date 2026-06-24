@@ -42,26 +42,31 @@ export function TemplateEditorDialog({
   onSaved,
 }: TemplateEditorDialogProps) {
   const { t } = useTranslation();
-  const [name, setName] = useState("");
+  const [nameZh, setNameZh] = useState("");
+  const [nameEn, setNameEn] = useState("");
   const [pattern, setPattern] = useState("");
 
   useEffect(() => {
     if (template) {
-      setName(template.name);
+      setNameZh(template.name_zh || template.name);
+      setNameEn(template.name_en || "");
       setPattern(template.pattern);
     } else {
-      setName("");
+      setNameZh("");
+      setNameEn("");
       setPattern("");
     }
   }, [template, open]);
 
   const handleSave = async () => {
-    if (!name.trim() || !pattern.trim()) return;
+    if (!nameZh.trim() || !pattern.trim()) return;
 
     const now = new Date().toISOString();
     const newTemplate: TemplateConfig = {
       id: template?.id || crypto.randomUUID(),
-      name: name.trim(),
+      name: nameZh.trim(),
+      name_zh: nameZh.trim(),
+      name_en: nameEn.trim(),
       pattern: pattern.trim(),
       created_at: template?.created_at || now,
       updated_at: now,
@@ -87,13 +92,23 @@ export function TemplateEditorDialog({
           <DialogTitle>{template ? t("templateEditor.editTitle") : t("templateEditor.newTitle")}</DialogTitle>
         </DialogHeader>
         <div className="space-y-4">
-          <div className="space-y-2">
-            <Label>{t("templateEditor.name")}</Label>
-            <Input
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              placeholder={t("templateEditor.namePlaceholder")}
-            />
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-2">
+              <Label>{t("templateEditor.nameZh")}</Label>
+              <Input
+                value={nameZh}
+                onChange={(e) => setNameZh(e.target.value)}
+                placeholder={t("templateEditor.nameZhPlaceholder")}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>{t("templateEditor.nameEn")}</Label>
+              <Input
+                value={nameEn}
+                onChange={(e) => setNameEn(e.target.value)}
+                placeholder={t("templateEditor.nameEnPlaceholder")}
+              />
+            </div>
           </div>
           <div className="space-y-2">
             <Label>{t("templateEditor.pattern")}</Label>
@@ -124,7 +139,7 @@ export function TemplateEditorDialog({
           <Button variant="outline" onClick={onClose}>
             {t("templateEditor.cancel")}
           </Button>
-          <Button onClick={handleSave} disabled={!name.trim() || !pattern.trim()}>
+          <Button onClick={handleSave} disabled={!nameZh.trim() || !pattern.trim()}>
             {t("templateEditor.save")}
           </Button>
         </DialogFooter>

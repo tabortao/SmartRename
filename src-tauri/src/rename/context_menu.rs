@@ -28,7 +28,7 @@ pub fn install() -> Result<(), String> {
     let (cmd_key, _) = hkcu
         .create_subkey(REG_COMMAND_PATH)
         .map_err(|e| format!("Failed to create command registry key: {}", e))?;
-    let command = format!("\"{}\" \"%1\"", get_exe_path());
+    let command = format!("\"{}\" \"%*\"", get_exe_path());
     cmd_key
         .set_value("", &command)
         .map_err(|e| format!("Failed to set command value: {}", e))?;

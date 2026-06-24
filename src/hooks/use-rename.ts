@@ -4,9 +4,18 @@ import { invoke } from "@tauri-apps/api/core";
 export interface TemplateConfig {
   id: string;
   name: string;
+  name_zh?: string;
+  name_en?: string;
   pattern: string;
   created_at: string;
   updated_at: string;
+}
+
+/** Get the display name of a template based on the current locale */
+export function getTemplateDisplayName(template: TemplateConfig, locale: string): string {
+  if (locale === "zh" && template.name_zh) return template.name_zh;
+  if (locale === "en" && template.name_en) return template.name_en;
+  return template.name_zh || template.name_en || template.name;
 }
 
 export interface TemplateVariable {
@@ -61,12 +70,27 @@ export function useRename() {
           // config.json may not exist yet, ignore
         }
 
-        // Auto-select last used template
+        // Auto-select last used template, or default to "日期_原文件名_版本"
         if (lastTemplateId && templateList.length > 0) {
           const lastTemplate = templateList.find((t) => t.id === lastTemplateId);
           if (lastTemplate) {
             setSelectedTemplate(lastTemplate);
             refreshPreview(lastTemplate.pattern, {}, 1, fileList);
+            return;
+          }
+        }
+        // No last template — default to "日期_原文件名_版本" for first-time users
+        if (templateList.length > 0) {
+          const defaultTemplate = templateList.find(
+            (t) => t.name === "日期_原文件名_版本" || t.name_zh === "日期_原文件名_版本"
+          );
+          if (defaultTemplate) {
+            setSelectedTemplate(defaultTemplate);
+            const defaults: Record<string, string> = {};
+            if (defaultTemplate.pattern.includes("{Input:版本号}")) {
+              defaults["版本号"] = "1";
+            }
+            refreshPreview(defaultTemplate.pattern, defaults, 1, fileList);
           }
         }
       } catch (error) {
@@ -120,10 +144,16 @@ export function useRename() {
   const selectTemplate = useCallback(
     (template: TemplateConfig | null) => {
       setSelectedTemplate(template);
-      setVarValues({});
       if (template) {
-        refreshPreview(template.pattern, {}, counterStart, files);
+        // Default version number to "1" if template has {Input:版本号}
+        const defaults: Record<string, string> = {};
+        if (template.pattern.includes("{Input:版本号}")) {
+          defaults["版本号"] = "1";
+        }
+        setVarValues(defaults);
+        refreshPreview(template.pattern, defaults, counterStart, files);
       } else {
+        setVarValues({});
         setPreviewResults([]);
       }
     },

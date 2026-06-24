@@ -207,10 +207,12 @@ export default function HomePage() {
       <UpdaterDialog />
 
       {isDragOver && (
-        <div className="absolute inset-0 z-50 flex items-center justify-center bg-primary/10 border-2 border-primary border-dashed rounded-lg pointer-events-none">
-          <span className="text-primary text-lg font-semibold drop-shadow">
-            {t("rename.dropFilesHere")}
-          </span>
+        <div className="absolute inset-0 z-50 flex items-center justify-center bg-emerald-500/10 border-2 border-emerald-500 border-dashed rounded-lg pointer-events-none backdrop-blur-[1px]">
+          <div className="flex flex-col items-center gap-2">
+            <span className="text-emerald-600 text-lg font-semibold drop-shadow">
+              {t("rename.dropFilesHere")}
+            </span>
+          </div>
         </div>
       )}
 

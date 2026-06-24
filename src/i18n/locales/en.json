@@ -64,7 +64,12 @@
       "title": "Title",
       "version": "Version",
       "author": "Author",
-      "project": "Project"
+      "project": "Project",
+      "主题": "Topic",
+      "名称": "Name",
+      "版本号": "Version",
+      "备注": "Note",
+      "核心信息": "Core Info"
     },
     "varTypes": {
       "Date": "Date",
@@ -85,7 +90,11 @@
     "newTitle": "New Template",
     "name": "Template Name",
     "namePlaceholder": "e.g. Weekly Report",
-    "pattern": "Pattern",
+    "nameZh": "Chinese Name",
+    "nameZhPlaceholder": "e.g. 日期_主题",
+    "nameEn": "English Name",
+    "nameEnPlaceholder": "e.g. Date_Topic",
+    "pattern": "Template Formula",
     "patternPlaceholder": "e.g. {Date:YYYYMMDD}_{Input:topic}.{Ext}",
     "availableVars": "Available Variables (click to insert)",
     "cancel": "Cancel",
