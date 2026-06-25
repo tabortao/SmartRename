@@ -10,7 +10,7 @@ import { WindowFrame } from "@/components/window-frame";
 import { LanguageToggle } from "@/components/language-toggle";
 import { ShortcutInput } from "@/components/shortcut-input";
 import { TemplateEditorDialog } from "@/components/rename/template-editor-dialog";
-import { Moon, Sun, Monitor, Palette, Keyboard, FileText } from "lucide-react";
+import { Moon, Sun, Monitor, Palette, Keyboard, FileText, Folder, File } from "lucide-react";
 import { registerShortcut, unregisterShortcut } from "@/lib/shortcut";
 import { toggleWindow } from "@/lib/window";
 import { toast } from "sonner";
@@ -20,11 +20,14 @@ import type { TemplateConfig } from "@/hooks/use-rename";
 import { getTemplateDisplayName } from "@/hooks/use-rename";
 
 const SHORTCUT_KEY = "global-shortcut-show-main";
+const RENAME_SHORTCUT_KEY = "global-shortcut-rename";
 
 type SettingSection = "appearance" | "shortcut" | "templates";
+type TemplateTab = "file" | "folder";
 
 export default function SettingsPage() {
   const [shortcut, setShortcut] = useState<string>("");
+  const [renameShortcut, setRenameShortcut] = useState<string>("");
   const [activeSection, setActiveSection] = useState<SettingSection>("appearance");
   const { t, i18n } = useTranslation();
   const { theme, setTheme } = useTheme();
@@ -34,6 +37,11 @@ export default function SettingsPage() {
   const [editorOpen, setEditorOpen] = useState(false);
   const [editingTemplate, setEditingTemplate] = useState<TemplateConfig | null>(null);
   const [contextMenuInstalled, setContextMenuInstalled] = useState(false);
+  const [templateTab, setTemplateTab] = useState<TemplateTab>("file");
+
+  // Default template state
+  const [defaultFileTemplateId, setDefaultFileTemplateId] = useState<string>("");
+  const [defaultFolderTemplateId, setDefaultFolderTemplateId] = useState<string>("");
 
   const handleShowMainWindow = useCallback(async () => {
     await toggleWindow("main");
@@ -45,18 +53,33 @@ export default function SettingsPage() {
       setShortcut(savedShortcut);
       registerShortcut(savedShortcut, handleShowMainWindow);
     }
+    const savedRenameShortcut = localStorage.getItem(RENAME_SHORTCUT_KEY);
+    if (savedRenameShortcut) {
+      setRenameShortcut(savedRenameShortcut);
+    }
   }, [handleShowMainWindow]);
 
-  // Load templates and context menu status
+  // Load templates and config
   useEffect(() => {
-    const loadTemplates = async () => {
+    const loadAll = async () => {
       try {
         const list = await invoke<TemplateConfig[]>("get_templates");
         setTemplates(list);
+
+        // Load default template IDs
+        try {
+          const fileDef = await invoke<string | null>("load_app_config", { key: "lastFileTemplateId" });
+          if (fileDef) setDefaultFileTemplateId(fileDef);
+        } catch { /* ignore */ }
+        try {
+          const folderDef = await invoke<string | null>("load_app_config", { key: "lastFolderTemplateId" });
+          if (folderDef) setDefaultFolderTemplateId(folderDef);
+        } catch { /* ignore */ }
       } catch (error) {
-        console.error("Failed to load templates:", error);
+        console.error("Failed to load data:", error);
       }
     };
+
     const checkContextMenu = async () => {
       try {
         const installed = await invoke<boolean>("is_context_menu_installed");
@@ -65,7 +88,7 @@ export default function SettingsPage() {
         console.error("Failed to check context menu:", error);
       }
     };
-    loadTemplates();
+    loadAll();
     checkContextMenu();
   }, []);
 
@@ -106,6 +129,24 @@ export default function SettingsPage() {
     }
   };
 
+  const handleRenameShortcutChange = async (newShortcut: string) => {
+    const oldShortcut = renameShortcut;
+    setRenameShortcut(newShortcut);
+
+    if (newShortcut) {
+      localStorage.setItem(RENAME_SHORTCUT_KEY, newShortcut);
+      await emit("rename-shortcut-changed", { shortcut: newShortcut });
+      toast.success(t("settings.shortcut.setSuccess", { shortcut: newShortcut }));
+    } else {
+      localStorage.removeItem(RENAME_SHORTCUT_KEY);
+      if (oldShortcut) {
+        await unregisterShortcut(oldShortcut);
+      }
+      await emit("rename-shortcut-changed", { shortcut: "" });
+      toast.info(t("settings.shortcut.cleared"));
+    }
+  };
+
   const handleNewTemplate = () => {
     setEditingTemplate(null);
     setEditorOpen(true);
@@ -141,6 +182,24 @@ export default function SettingsPage() {
       toast.error("Failed to toggle context menu");
     }
   };
+
+  const handleDefaultTemplateChange = async (type: "file" | "folder", templateId: string) => {
+    const key = type === "file" ? "lastFileTemplateId" : "lastFolderTemplateId";
+    if (type === "file") {
+      setDefaultFileTemplateId(templateId);
+    } else {
+      setDefaultFolderTemplateId(templateId);
+    }
+    try {
+      await invoke("save_app_config", { key, value: templateId });
+    } catch (error) {
+      console.error("Failed to save default template:", error);
+    }
+  };
+
+  const fileTemplates = templates.filter((t) => t.pattern.includes("{Ext}"));
+  const folderTemplates = templates.filter((t) => !t.pattern.includes("{Ext}"));
+  const currentTemplates = templateTab === "file" ? fileTemplates : folderTemplates;
 
   const menuItems = [
     { id: "appearance" as SettingSection, label: t("settings.appearance.title"), icon: Palette },
@@ -251,6 +310,18 @@ export default function SettingsPage() {
                   </div>
                   <ShortcutInput value={shortcut} onChange={handleShortcutChange} />
                 </div>
+
+                <div className="border-t" />
+
+                <div className="flex items-center justify-between py-2.5">
+                  <div className="flex-1">
+                    <label className="text-sm font-medium">{t("settings.shortcut.renameShortcut")}</label>
+                    <p className="text-muted-foreground mt-0.5 text-xs">
+                      {t("settings.shortcut.renameShortcutDesc")}
+                    </p>
+                  </div>
+                  <ShortcutInput value={renameShortcut} onChange={handleRenameShortcutChange} />
+                </div>
               </div>
             </div>
           )}
@@ -280,22 +351,91 @@ export default function SettingsPage() {
                   </Button>
                 </div>
 
-                {templates.length === 0 ? (
+                {/* Default template settings */}
+                <div className="border-border space-y-3 rounded-lg border p-3">
+                  <p className="text-sm font-medium">{t("settings.templates.defaultTemplates")}</p>
+                  <div className="flex items-center gap-2">
+                    <File className="text-muted-foreground h-4 w-4 shrink-0" />
+                    <label className="text-xs font-medium shrink-0">{t("settings.templates.fileTemplates")}</label>
+                    <select
+                      className="border-border bg-background rounded-md border px-2 py-1 text-xs flex-1 min-w-0"
+                      value={defaultFileTemplateId}
+                      onChange={(e) => handleDefaultTemplateChange("file", e.target.value)}
+                    >
+                      <option value="">{t("settings.templates.none")}</option>
+                      {fileTemplates.map((tmpl) => (
+                        <option key={tmpl.id} value={tmpl.id}>
+                          {getTemplateDisplayName(tmpl, i18n.language)}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Folder className="text-muted-foreground h-4 w-4 shrink-0" />
+                    <label className="text-xs font-medium shrink-0">{t("settings.templates.folderTemplates")}</label>
+                    <select
+                      className="border-border bg-background rounded-md border px-2 py-1 text-xs flex-1 min-w-0"
+                      value={defaultFolderTemplateId}
+                      onChange={(e) => handleDefaultTemplateChange("folder", e.target.value)}
+                    >
+                      <option value="">{t("settings.templates.none")}</option>
+                      {folderTemplates.map((tmpl) => (
+                        <option key={tmpl.id} value={tmpl.id}>
+                          {getTemplateDisplayName(tmpl, i18n.language)}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+
+                {/* File/Folder tabs */}
+                <div className="flex border-b border-border">
+                  <button
+                    onClick={() => setTemplateTab("file")}
+                    className={cn(
+                      "flex items-center gap-1.5 px-4 py-2 text-sm font-medium border-b-2 transition-colors",
+                      templateTab === "file"
+                        ? "border-primary text-primary"
+                        : "border-transparent text-muted-foreground hover:text-foreground"
+                    )}
+                  >
+                    <File className="h-4 w-4" />
+                    {t("settings.templates.fileTemplates")}
+                    <span className="text-muted-foreground text-xs">({fileTemplates.length})</span>
+                  </button>
+                  <button
+                    onClick={() => setTemplateTab("folder")}
+                    className={cn(
+                      "flex items-center gap-1.5 px-4 py-2 text-sm font-medium border-b-2 transition-colors",
+                      templateTab === "folder"
+                        ? "border-primary text-primary"
+                        : "border-transparent text-muted-foreground hover:text-foreground"
+                    )}
+                  >
+                    <Folder className="h-4 w-4" />
+                    {t("settings.templates.folderTemplates")}
+                    <span className="text-muted-foreground text-xs">({folderTemplates.length})</span>
+                  </button>
+                </div>
+
+                {currentTemplates.length === 0 ? (
                   <p className="text-muted-foreground py-4 text-center text-sm">
                     {t("settings.templates.noTemplates")}
                   </p>
                 ) : (
                   <div className="space-y-2">
-                    {templates.map((tmpl) => (
+                    {currentTemplates.map((tmpl) => (
                       <div
                         key={tmpl.id}
                         className="border-border flex items-center justify-between rounded-lg border p-3"
                       >
                         <div className="flex-1 min-w-0">
-                          <p className="text-sm font-medium truncate">{getTemplateDisplayName(tmpl, i18n.language)}</p>
+                          <p className="text-sm font-medium truncate">
+                            {getTemplateDisplayName(tmpl, i18n.language)}
+                          </p>
                           <p className="text-muted-foreground truncate text-xs">{tmpl.pattern}</p>
                         </div>
-                        <div className="ml-3 flex gap-1 shrink-0">
+                        <div className="ml-3 flex items-center gap-2 shrink-0">
                           <Button
                             variant="ghost"
                             size="sm"

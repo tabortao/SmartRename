@@ -1,6 +1,7 @@
 import { Button } from "@/components/ui/button";
-import { RotateCcw, Play, Trash2, Files } from "lucide-react";
+import { RotateCcw, Play, Trash2, Files, Folder } from "lucide-react";
 import { useTranslation } from "react-i18next";
+import type { ItemType } from "@/hooks/use-rename";
 
 interface RenameControlsProps {
   fileCount: number;
@@ -8,6 +9,7 @@ interface RenameControlsProps {
   onApply: () => void;
   onReset: () => void;
   onClearFiles?: () => void;
+  itemType?: ItemType;
 }
 
 export function RenameControls({
@@ -16,9 +18,19 @@ export function RenameControls({
   onApply,
   onReset,
   onClearFiles,
+  itemType,
 }: RenameControlsProps) {
   const { t } = useTranslation();
   const hasFiles = fileCount > 0;
+  const isFolder = itemType === "folder";
+  const isMixed = itemType === "mixed";
+  const Icon = isFolder ? Folder : Files;
+
+  const countLabel = isFolder
+    ? t("rename.folderCount", { count: fileCount })
+    : isMixed
+      ? t("rename.itemCount", { count: fileCount })
+      : t("rename.fileCount", { count: fileCount });
 
   return (
     <div className="border-border flex items-center justify-between border-t px-4 py-3">
@@ -50,8 +62,8 @@ export function RenameControls({
         )}
       </div>
       <div className="flex items-center gap-2 text-sm text-muted-foreground">
-        <Files className="h-4 w-4" />
-        <span>{t("rename.fileCount", { count: fileCount })}</span>
+        <Icon className="h-4 w-4" />
+        <span>{countLabel}</span>
       </div>
     </div>
   );

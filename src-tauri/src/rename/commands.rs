@@ -135,6 +135,40 @@ fn get_default_templates() -> Vec<TemplateConfig> {
             created_at: chrono::Local::now().to_rfc3339(),
             updated_at: chrono::Local::now().to_rfc3339(),
         },
+        // ===== Folder templates (no {Ext}) =====
+        // 7. 日期_文件夹 / Date_Folder
+        // Example: 20260624_项目资料
+        TemplateConfig {
+            id: uuid::Uuid::new_v4().to_string(),
+            name: "日期_文件夹".to_string(),
+            name_zh: "日期_文件夹".to_string(),
+            name_en: "Date_Folder".to_string(),
+            pattern: "{Date:YYYYMMDD}_{OriginalName}".to_string(),
+            created_at: chrono::Local::now().to_rfc3339(),
+            updated_at: chrono::Local::now().to_rfc3339(),
+        },
+        // 8. 项目_文件夹 / Project_Folder
+        // Example: 市场部_季度报告
+        TemplateConfig {
+            id: uuid::Uuid::new_v4().to_string(),
+            name: "项目_文件夹".to_string(),
+            name_zh: "项目_文件夹".to_string(),
+            name_en: "Project_Folder".to_string(),
+            pattern: "{Input:项目名}_{OriginalName}".to_string(),
+            created_at: chrono::Local::now().to_rfc3339(),
+            updated_at: chrono::Local::now().to_rfc3339(),
+        },
+        // 9. 序号_文件夹 / Number_Folder
+        // Example: 01_会议资料
+        TemplateConfig {
+            id: uuid::Uuid::new_v4().to_string(),
+            name: "序号_文件夹".to_string(),
+            name_zh: "序号_文件夹".to_string(),
+            name_en: "Number_Folder".to_string(),
+            pattern: "{Counter:01}_{OriginalName}".to_string(),
+            created_at: chrono::Local::now().to_rfc3339(),
+            updated_at: chrono::Local::now().to_rfc3339(),
+        },
     ]
 }
 
@@ -196,6 +230,7 @@ fn save_templates(app: &AppHandle, templates: &[TemplateConfig]) -> Result<(), S
 pub fn parse_cli_args(app: AppHandle) -> Vec<String> {
     let state = app.state::<InitialFiles>();
     let result = state.0.lock().unwrap().clone();
+    println!("[SmartRename] parse_cli_args: returning {} files: {:?}", result.len(), result);
     result
 }
 
@@ -323,4 +358,48 @@ pub fn uninstall_context_menu() -> Result<(), String> {
 #[tauri::command]
 pub fn is_context_menu_installed() -> bool {
     context_menu::is_installed()
+}
+
+/// Detect whether the given paths are files, folders, or mixed
+/// Returns "file", "folder", or "mixed"
+#[tauri::command]
+pub fn detect_item_type(paths: Vec<String>) -> String {
+    use super::file_utils;
+    println!("[SmartRename] detect_item_type: paths = {:?}", paths);
+    let mut has_file = false;
+    let mut has_folder = false;
+
+    for path in &paths {
+        if file_utils::is_directory(path) {
+            has_folder = true;
+        } else {
+            has_file = true;
+        }
+        if has_file && has_folder {
+            let result = "mixed".to_string();
+            println!("[SmartRename] detect_item_type: result = {}", result);
+            return result;
+        }
+    }
+
+    let result = if has_folder {
+        "folder".to_string()
+    } else {
+        "file".to_string()
+    };
+    println!("[SmartRename] detect_item_type: result = {}", result);
+    result
+}
+
+/// Check if a template pattern has Input variables (requires user input)
+#[tauri::command]
+pub fn has_input_variable(pattern: String) -> bool {
+    template::has_input_variable(&pattern)
+}
+
+/// Check if a template has Input variables without default values
+/// Templates where all Input vars have defaults (e.g. 版本号=1) can use shortcuts
+#[tauri::command]
+pub fn has_required_input(pattern: String) -> bool {
+    template::has_required_input(&pattern)
 }

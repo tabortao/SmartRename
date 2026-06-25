@@ -37,6 +37,8 @@
     "reset": "重置",
     "resetComplete": "重置完成",
     "fileCount": "已选择 {{count}} 个文件",
+    "folderCount": "已选择 {{count}} 个文件夹",
+    "itemCount": "已选择 {{count}} 个项目",
     "noFiles": "未加载文件，请通过右键菜单选择文件",
     "successRenamed": "成功重命名 {{count}} 个文件！",
     "partialRename": "已重命名 {{success}} 个文件，{{failed}} 个失败",
@@ -46,7 +48,15 @@
     "invalid": "无效",
     "originalName": "原文件名",
     "previewName": "预览文件名",
-    "dropFilesHere": "拖放文件到此处"
+    "originalFolderName": "原文件夹名",
+    "previewFolderName": "预览文件夹名",
+    "originalItemName": "原名",
+    "previewItemName": "预览名",
+    "dropFilesHere": "拖放文件到此处",
+    "dropItemsHere": "拖放文件/文件夹到此处",
+    "mixedItemsWarning": "同时选择了文件和文件夹，请选择同类型项目",
+    "folderNoExtWarning": "文件夹不能使用包含扩展名的模板",
+    "fileNoExtWarning": "文件不能使用文件夹模板（不含扩展名）"
   },
   "template": {
     "label": "模板：",
@@ -146,6 +156,8 @@
       "placeholder": "按下组合键设置",
       "showMain": "显示主窗口",
       "showMainDesc": "使用快捷键快速显示主窗口",
+      "renameShortcut": "一键重命名",
+      "renameShortcutDesc": "选中文件/文件夹后，按快捷键一键按默认模板重命名",
       "setSuccess": "已将快捷键设为 {{shortcut}}！",
       "cleared": "已取消快捷键！"
     },
@@ -157,7 +169,11 @@
       "delete": "删除",
       "noTemplates": "暂无模板，创建一个开始吧！",
       "installContextMenu": "安装右键菜单",
-      "uninstallContextMenu": "卸载右键菜单"
+      "uninstallContextMenu": "卸载右键菜单",
+      "fileTemplates": "文件模板",
+      "folderTemplates": "文件夹模板",
+      "defaultTemplates": "默认模板",
+      "none": "无"
     }
   },
   "releaseVersion": {

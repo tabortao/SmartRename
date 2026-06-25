@@ -5,9 +5,9 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { ChevronDown, Plus, Pencil, Trash2 } from "lucide-react";
+import { ChevronDown, Plus, Pencil, Trash2, Folder } from "lucide-react";
 import { useTranslation } from "react-i18next";
-import type { TemplateConfig } from "@/hooks/use-rename";
+import type { TemplateConfig, ItemType } from "@/hooks/use-rename";
 import { getTemplateDisplayName } from "@/hooks/use-rename";
 
 interface TemplateSelectorProps {
@@ -17,6 +17,7 @@ interface TemplateSelectorProps {
   onNew: () => void;
   onEdit: (template: TemplateConfig) => void;
   onDelete: (id: string) => void;
+  itemType?: ItemType;
 }
 
 export function TemplateSelector({
@@ -28,6 +29,8 @@ export function TemplateSelector({
   onDelete,
 }: TemplateSelectorProps) {
   const { t, i18n } = useTranslation();
+
+  const isFolderTemplate = (tpl: TemplateConfig) => !tpl.pattern.includes("{Ext}");
 
   return (
     <div className="flex items-center gap-2 px-4 py-2">
@@ -49,7 +52,12 @@ export function TemplateSelector({
           </DropdownMenuItem>
           {templates.map((tpl) => (
             <DropdownMenuItem key={tpl.id} onClick={() => onSelect(tpl)}>
-              {getTemplateDisplayName(tpl, i18n.language)}
+              <span className="flex items-center gap-1.5">
+                {getTemplateDisplayName(tpl, i18n.language)}
+                {isFolderTemplate(tpl) && (
+                  <Folder className="h-3 w-3 text-blue-500 shrink-0" />
+                )}
+              </span>
             </DropdownMenuItem>
           ))}
         </DropdownMenuContent>

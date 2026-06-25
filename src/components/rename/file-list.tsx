@@ -1,14 +1,15 @@
 import { cn } from "@/lib/utils";
-import { File, ArrowRight, AlertTriangle, AlertCircle } from "lucide-react";
-import type { PreviewItem } from "@/hooks/use-rename";
+import { File, Folder, ArrowRight, AlertTriangle, AlertCircle } from "lucide-react";
+import type { PreviewItem, ItemType } from "@/hooks/use-rename";
 import { useTranslation } from "react-i18next";
 
 interface FileListProps {
   items: PreviewItem[];
+  itemType?: ItemType;
   className?: string;
 }
 
-export function FileList({ items, className }: FileListProps) {
+export function FileList({ items, itemType, className }: FileListProps) {
   const { t } = useTranslation();
 
   if (items.length === 0) {
@@ -22,13 +23,21 @@ export function FileList({ items, className }: FileListProps) {
     );
   }
 
+  const isFolder = itemType === "folder";
+  const isMixed = itemType === "mixed";
+  const Icon = isFolder ? Folder : File;
+
   return (
     <div className={cn("flex flex-1 flex-col overflow-hidden", className)}>
       <div className="border-border flex items-center gap-2 border-b bg-muted/30 px-3 py-2 text-xs font-medium text-muted-foreground">
-        <File className="h-3.5 w-3.5 shrink-0" />
-        <span className="flex-1">{t("rename.originalName")}</span>
+        <Icon className="h-3.5 w-3.5 shrink-0" />
+        <span className="flex-1">
+          {isFolder ? t("rename.originalFolderName") : isMixed ? t("rename.originalItemName") : t("rename.originalName")}
+        </span>
         <ArrowRight className="h-3.5 w-3.5 shrink-0" />
-        <span className="flex-1">{t("rename.previewName")}</span>
+        <span className="flex-1">
+          {isFolder ? t("rename.previewFolderName") : isMixed ? t("rename.previewItemName") : t("rename.previewName")}
+        </span>
       </div>
       <div className="flex-1 overflow-auto">
         {items.map((item, index) => (

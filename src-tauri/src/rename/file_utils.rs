@@ -25,6 +25,13 @@ pub fn get_original_name(path: &str) -> &str {
         .unwrap_or("")
 }
 
+/// Check if a path is a directory
+pub fn is_directory(path: &str) -> bool {
+    std::fs::metadata(path)
+        .map(|m| m.is_dir())
+        .unwrap_or(false)
+}
+
 /// Check if filename contains invalid characters (< > : " / \ | ? *)
 pub fn is_valid_filename(name: &str) -> bool {
     if name.is_empty() {

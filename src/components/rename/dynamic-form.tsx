@@ -2,7 +2,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Calendar, Clock, FileText, FolderOpen, Hash, Type } from "lucide-react";
 import { useTranslation } from "react-i18next";
-import type { TemplateVariable } from "@/hooks/use-rename";
+import type { TemplateVariable, ItemType } from "@/hooks/use-rename";
 
 interface DynamicFormProps {
   variables: TemplateVariable[];
@@ -10,6 +10,7 @@ interface DynamicFormProps {
   counterStart: number;
   onVarChange: (key: string, value: string) => void;
   onCounterChange: (value: number) => void;
+  itemType?: ItemType;
 }
 
 function getVarTypeLabel(varType: string, t: (key: string) => string): string {
@@ -43,6 +44,7 @@ export function DynamicForm({
   counterStart,
   onVarChange,
   onCounterChange,
+  itemType,
 }: DynamicFormProps) {
   const { t } = useTranslation();
 
@@ -51,11 +53,17 @@ export function DynamicForm({
   }
 
   const hasCounter = variables.some((v) => v.varType.type === "Counter");
+  const isFolder = itemType === "folder";
 
   return (
     <div className="space-y-3 p-4">
       {variables.map((v, index) => {
         const varType = v.varType.type;
+
+        // Hide {Ext} for folders
+        if (varType === "Ext" && isFolder) {
+          return null;
+        }
 
         if (varType === "Input") {
           const rawLabel = v.label || "value";

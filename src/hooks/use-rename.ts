@@ -38,8 +38,11 @@ export interface RenameResult {
   error: string | null;
 }
 
+export type ItemType = "file" | "folder" | "mixed" | null;
+
 export function useRename() {
   const [files, setFiles] = useState<string[]>([]);
+  const [itemType, setItemType] = useState<ItemType>(null);
   const [templates, setTemplates] = useState<TemplateConfig[]>([]);
   const [selectedTemplate, setSelectedTemplate] = useState<TemplateConfig | null>(null);
   const [varValues, setVarValues] = useState<Record<string, string>>({});
@@ -48,6 +51,14 @@ export function useRename() {
   const [isLoading, setIsLoading] = useState(true);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const initializedRef = useRef(false);
+
+  // Refs for stable shortcut callback access
+  const applyRenameRef = useRef<() => Promise<RenameResult[]>>(async () => []);
+  const selectTemplateRef = useRef<(template: TemplateConfig | null) => void>(() => {});
+  const filesRef = useRef<string[]>([]);
+  const templatesRef = useRef<TemplateConfig[]>([]);
+  const itemTypeRef = useRef<ItemType>(null);
+  const pendingAutoSelectRef = useRef(false);
 
   // Load files from CLI args and templates on mount
   useEffect(() => {
@@ -59,39 +70,8 @@ export function useRename() {
         ]);
         setFiles(fileList);
         setTemplates(templateList);
-
-        // Load last template ID separately (failure should not block init)
-        let lastTemplateId: string | null = null;
-        try {
-          lastTemplateId = await invoke<string | null>("load_app_config", {
-            key: "lastTemplateId",
-          });
-        } catch {
-          // config.json may not exist yet, ignore
-        }
-
-        // Auto-select last used template, or default to "日期_原文件名_版本"
-        if (lastTemplateId && templateList.length > 0) {
-          const lastTemplate = templateList.find((t) => t.id === lastTemplateId);
-          if (lastTemplate) {
-            setSelectedTemplate(lastTemplate);
-            refreshPreview(lastTemplate.pattern, {}, 1, fileList);
-            return;
-          }
-        }
-        // No last template — default to "日期_原文件名_版本" for first-time users
-        if (templateList.length > 0) {
-          const defaultTemplate = templateList.find(
-            (t) => t.name === "日期_原文件名_版本" || t.name_zh === "日期_原文件名_版本"
-          );
-          if (defaultTemplate) {
-            setSelectedTemplate(defaultTemplate);
-            const defaults: Record<string, string> = {};
-            if (defaultTemplate.pattern.includes("{Input:版本号}")) {
-              defaults["版本号"] = "1";
-            }
-            refreshPreview(defaultTemplate.pattern, defaults, 1, fileList);
-          }
+        if (fileList.length > 0) {
+          pendingAutoSelectRef.current = true;
         }
       } catch (error) {
         console.error("Failed to initialize:", error);
@@ -103,6 +83,73 @@ export function useRename() {
     init();
   }, []);
 
+  // Auto-select default template when files change (handles init, right-click, drag-drop)
+  useEffect(() => {
+    if (files.length === 0 || !initializedRef.current) return;
+
+    const autoSelect = async () => {
+      // Detect item type
+      let detectedType: ItemType = null;
+      try {
+        const type = await invoke<string>("detect_item_type", { paths: files });
+        detectedType = type as ItemType;
+        console.log("Detected item type:", detectedType);
+      } catch (error) {
+        console.error("Failed to detect item type:", error);
+      }
+      setItemType(detectedType);
+
+      // Load default template based on item type
+      try {
+        const configKey = detectedType === "folder" ? "lastFolderTemplateId" : "lastFileTemplateId";
+        let defaultTemplateId: string | null = null;
+        try {
+          defaultTemplateId = await invoke<string | null>("load_app_config", { key: configKey });
+        } catch { /* ignore */ }
+        // Fallback to lastTemplateId
+        if (!defaultTemplateId) {
+          try {
+            defaultTemplateId = await invoke<string | null>("load_app_config", { key: "lastTemplateId" });
+          } catch { /* ignore */ }
+        }
+
+        if (defaultTemplateId) {
+          const template = templatesRef.current.find((t) => t.id === defaultTemplateId);
+          if (template) {
+            selectTemplate(template);
+            return;
+          }
+        }
+
+        // Fallback to type-specific defaults
+        if (detectedType === "file") {
+          const defaultTemplate = templatesRef.current.find(
+            (t) => t.name === "日期_原文件名_版本" || t.name_zh === "日期_原文件名_版本"
+          );
+          if (defaultTemplate) {
+            selectTemplate(defaultTemplate);
+            return;
+          }
+        } else if (detectedType === "folder") {
+          const defaultTemplate = templatesRef.current.find(
+            (t) => t.name === "日期_文件夹" || t.name_zh === "日期_文件夹"
+          );
+          if (defaultTemplate) {
+            selectTemplate(defaultTemplate);
+            return;
+          }
+        }
+
+        setVarValues({});
+        setSelectedTemplate(null);
+      } catch (error) {
+        console.error("Failed to auto-select template:", error);
+      }
+    };
+
+    autoSelect();
+  }, [files]);
+
   // Persist selected template ID to config
   useEffect(() => {
     if (!initializedRef.current) return;
@@ -110,8 +157,14 @@ export function useRename() {
       invoke("save_app_config", { key: "lastTemplateId", value: selectedTemplate.id }).catch(
         console.error
       );
+      const typeKey = itemType === "folder" ? "lastFolderTemplateId" : "lastFileTemplateId";
+      if (itemType) {
+        invoke("save_app_config", { key: typeKey, value: selectedTemplate.id }).catch(
+          console.error
+        );
+      }
     }
-  }, [selectedTemplate]);
+  }, [selectedTemplate, itemType]);
 
   // Refresh preview when variables change (debounced)
   const refreshPreview = useCallback(
@@ -145,7 +198,6 @@ export function useRename() {
     (template: TemplateConfig | null) => {
       setSelectedTemplate(template);
       if (template) {
-        // Default version number to "1" if template has {Input:版本号}
         const defaults: Record<string, string> = {};
         if (template.pattern.includes("{Input:版本号}")) {
           defaults["版本号"] = "1";
@@ -219,6 +271,7 @@ export function useRename() {
     setPreviewResults([]);
     setVarValues({});
     setCounterStart(1);
+    setItemType(null);
   }, []);
 
   // Reload templates
@@ -237,45 +290,32 @@ export function useRename() {
       setFiles((prev) => {
         const existing = new Set(prev);
         const unique = newFiles.filter((f) => !existing.has(f));
-        const updated = [...prev, ...unique];
-        if (selectedTemplate) {
-          refreshPreview(selectedTemplate.pattern, varValues, counterStart, updated);
-        }
-        return updated;
+        return [...prev, ...unique];
       });
     },
-    [selectedTemplate, varValues, counterStart, refreshPreview]
+    []
   );
 
-  // Replace files (used when entering via right-click context menu)
-  const replaceFiles = useCallback(async (newFiles: string[]) => {
+  // Replace files (used when entering via right-click context menu or drag-drop)
+  const replaceFiles = useCallback((newFiles: string[]) => {
+    console.log("replaceFiles called with:", newFiles);
     setFiles(newFiles);
-    setVarValues({});
     setCounterStart(1);
     setPreviewResults([]);
-
-    // Try to auto-load last template from config
-    try {
-      const lastTemplateId = await invoke<string | null>("load_app_config", {
-        key: "lastTemplateId",
-      });
-      if (lastTemplateId) {
-        const templateList = await invoke<TemplateConfig[]>("get_templates");
-        const lastTemplate = templateList.find((t) => t.id === lastTemplateId);
-        if (lastTemplate) {
-          setSelectedTemplate(lastTemplate);
-          refreshPreview(lastTemplate.pattern, {}, 1, newFiles);
-          return;
-        }
-      }
-    } catch {
-      // Ignore errors
-    }
+    setVarValues({});
     setSelectedTemplate(null);
-  }, [refreshPreview]);
+  }, []);
+
+  // Keep refs in sync with state for shortcut callbacks
+  applyRenameRef.current = applyRename;
+  selectTemplateRef.current = selectTemplate;
+  filesRef.current = files;
+  templatesRef.current = templates;
+  itemTypeRef.current = itemType;
 
   return {
     files,
+    itemType,
     templates,
     selectedTemplate,
     varValues,
@@ -291,5 +331,11 @@ export function useRename() {
     replaceFiles,
     reloadTemplates,
     addFiles,
+    // Refs for stable shortcut access
+    applyRenameRef,
+    selectTemplateRef,
+    filesRef,
+    templatesRef,
+    itemTypeRef,
   };
 }

@@ -28,12 +28,21 @@ pub fn run() {
         .collect();
 
     let builder = tauri::Builder::default()
-        .manage(InitialFiles(Mutex::new(initial_files)))
-        .setup(|_app| {
-            // All initialization is done via managed state (InitialFiles) and plugins
+        .manage(InitialFiles(Mutex::new(initial_files.clone())))
+        .setup(move |app| {
+            // Show main window when launched with file arguments (e.g. right-click context menu)
+            let has_files = !app.state::<InitialFiles>().0.lock().unwrap().is_empty();
+            println!("[SmartRename] Setup: initial_files = {:?}", initial_files);
+            if has_files {
+                if let Some(window) = app.get_webview_window("main") {
+                    let _ = window.show();
+                    let _ = window.set_focus();
+                }
+            }
             Ok(())
         })
         .plugin(tauri_plugin_single_instance::init(|app, args, _cwd| {
+            println!("[SmartRename] Single instance callback: args = {:?}", args);
             // When attempting to start a second instance, focus the existing main window
             // and forward the new file paths to the frontend
             if let Some(window) = app.get_webview_window("main") {
@@ -49,9 +58,15 @@ pub fn run() {
                     .filter(|arg| std::path::Path::new(arg).exists())
                     .cloned()
                     .collect();
+                println!("[SmartRename] Single instance: filtered file_paths = {:?}", file_paths);
                 if !file_paths.is_empty() {
                     let _ = app.emit("new-files", file_paths);
+                    println!("[SmartRename] Single instance: emitted 'new-files' event");
+                } else {
+                    println!("[SmartRename] Single instance: no valid file paths found");
                 }
+            } else {
+                println!("[SmartRename] Single instance: no args provided");
             }
         }))
         .plugin(tauri_plugin_opener::init())
@@ -72,6 +87,9 @@ pub fn run() {
             rename::commands::is_context_menu_installed,
             rename::commands::save_app_config,
             rename::commands::load_app_config,
+            rename::commands::detect_item_type,
+            rename::commands::has_input_variable,
+            rename::commands::has_required_input,
         ]);
 
     // Updater disabled: requires signed package keys & endpoints.

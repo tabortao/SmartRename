@@ -59,6 +59,32 @@ pub struct RenameResult {
     pub error: Option<String>,
 }
 
+/// Check if a template pattern contains any Input variables (requires user input)
+pub fn has_input_variable(pattern: &str) -> bool {
+    parse_template(pattern)
+        .iter()
+        .any(|v| matches!(v.var_type, VarType::Input))
+}
+
+/// Known default values for Input variable labels
+fn get_input_defaults() -> std::collections::HashMap<&'static str, &'static str> {
+    let mut defaults = std::collections::HashMap::new();
+    defaults.insert("版本号", "1");
+    defaults
+}
+
+/// Check if a template has Input variables that DON'T have default values
+/// Templates where all Input vars have defaults (e.g. 版本号=1) can use shortcuts
+pub fn has_required_input(pattern: &str) -> bool {
+    let defaults = get_input_defaults();
+    parse_template(pattern)
+        .iter()
+        .any(|v| {
+            matches!(v.var_type, VarType::Input)
+                && !v.label.as_ref().map_or(false, |l| defaults.contains_key(l.as_str()))
+        })
+}
+
 /// Parse a template pattern string into a list of TemplateVariable
 pub fn parse_template(pattern: &str) -> Vec<TemplateVariable> {
     let re = Regex::new(r"\{([A-Za-z]+)(?::([^}]+))?\}").unwrap();
@@ -245,6 +271,30 @@ mod tests {
     fn test_parse_template_empty() {
         let vars = parse_template("no_variables_here.txt");
         assert_eq!(vars.len(), 0);
+    }
+
+    #[test]
+    fn test_has_input_variable() {
+        assert!(has_input_variable("{Date:YYYYMMDD}_{Input:topic}.{Ext}"));
+        assert!(has_input_variable("{Input:名称}.{Ext}"));
+        assert!(!has_input_variable("{Date:YYYYMMDD}.{Ext}"));
+        assert!(!has_input_variable("{Counter:01}_{OriginalName}"));
+        assert!(!has_input_variable(""));
+    }
+
+    #[test]
+    fn test_has_required_input() {
+        // 版本号 has default "1" -> not required
+        assert!(!has_required_input("{Date:YYYYMMDD}_{OriginalName}_v{Input:版本号}.{Ext}"));
+        // 主题 has no default -> required
+        assert!(has_required_input("{Date:YYYYMMDD}_{Input:主题}.{Ext}"));
+        // 备注 has no default -> required
+        assert!(has_required_input("{Input:项目名}_{OriginalName}"));
+        // No Input vars at all
+        assert!(!has_required_input("{Date:YYYYMMDD}_{OriginalName}"));
+        assert!(!has_required_input("{Counter:01}_{OriginalName}"));
+        // Multiple Inputs: 版本号 has default, 主题 doesn't -> required
+        assert!(has_required_input("{Input:主题}_v{Input:版本号}.{Ext}"));
     }
 
     #[test]
