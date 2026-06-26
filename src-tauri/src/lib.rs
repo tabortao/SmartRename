@@ -22,14 +22,30 @@ fn update_tray_menu(app: tauri::AppHandle, show_text: String, quit_text: String)
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     // Capture CLI args BEFORE Tauri runtime consumes them
-    let initial_files: Vec<String> = std::env::args()
-        .skip(1)
-        .filter(|arg| std::path::Path::new(arg).exists())
+    let all_args: Vec<String> = std::env::args().collect();
+    let is_direct = all_args.iter().any(|a| a == "--direct");
+    let initial_files: Vec<String> = all_args
+        .iter()
+        .skip(1) // Skip executable path
+        .filter(|a| *a != "--direct")
+        .filter(|a| std::path::Path::new(a).exists())
+        .cloned()
         .collect();
+    let direct_files = initial_files.clone();
 
     let builder = tauri::Builder::default()
         .manage(InitialFiles(Mutex::new(initial_files.clone())))
         .setup(move |app| {
+            // Handle --direct flag: rename and exit without opening UI
+            if is_direct && !direct_files.is_empty() {
+                println!("[SmartRename] Direct rename mode: {} files", direct_files.len());
+                match rename::commands::perform_direct_rename(app.handle(), direct_files) {
+                    Ok(msg) => println!("[SmartRename] {}", msg),
+                    Err(e) => eprintln!("[SmartRename] Direct rename failed: {}", e),
+                }
+                std::process::exit(0);
+            }
+
             // Show main window when launched with file arguments (e.g. right-click context menu)
             let has_files = !app.state::<InitialFiles>().0.lock().unwrap().is_empty();
             println!("[SmartRename] Setup: initial_files = {:?}", initial_files);
@@ -43,6 +59,33 @@ pub fn run() {
         })
         .plugin(tauri_plugin_single_instance::init(|app, args, _cwd| {
             println!("[SmartRename] Single instance callback: args = {:?}", args);
+
+            // Check for --direct flag in single-instance callback
+            let is_direct = args.iter().any(|a| a == "--direct");
+            if is_direct {
+                let file_paths: Vec<String> = args
+                    .iter()
+                    .skip(1) // Skip executable path
+                    .filter(|a| *a != "--direct")
+                    .filter(|a| std::path::Path::new(a).exists())
+                    .cloned()
+                    .collect();
+                println!("[SmartRename] Single instance direct rename: {:?}", file_paths);
+                if !file_paths.is_empty() {
+                    match rename::commands::perform_direct_rename(app, file_paths) {
+                        Ok(msg) => {
+                            println!("[SmartRename] {}", msg);
+                            let _ = app.emit("direct-rename-success", msg);
+                        }
+                        Err(e) => {
+                            eprintln!("[SmartRename] Direct rename failed: {}", e);
+                            let _ = app.emit("direct-rename-error", e);
+                        }
+                    }
+                }
+                return;
+            }
+
             // When attempting to start a second instance, focus the existing main window
             // and forward the new file paths to the frontend
             if let Some(window) = app.get_webview_window("main") {

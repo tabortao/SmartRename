@@ -156,8 +156,10 @@
       "placeholder": "按下组合键设置",
       "showMain": "显示主窗口",
       "showMainDesc": "使用快捷键快速显示主窗口",
-      "renameShortcut": "一键重命名",
-      "renameShortcutDesc": "选中文件/文件夹后，按快捷键一键按默认模板重命名",
+      "fileRename": "文件重命名",
+      "fileRenameDesc": "在应用中选中文件后，按快捷键使用默认文件模板重命名",
+      "folderRename": "文件夹重命名",
+      "folderRenameDesc": "在应用中选中文件夹后，按快捷键使用默认文件夹模板重命名",
       "setSuccess": "已将快捷键设为 {{shortcut}}！",
       "cleared": "已取消快捷键！",
       "conflict": "快捷键 {{shortcut}} 已被其他应用占用"

@@ -5,6 +5,25 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.4] - 2026-06-27
+
+### Added
+
+- Separate file rename and folder rename shortcuts in Settings > Shortcuts: each has its own configurable keyboard shortcut
+- File rename shortcut uses the default file template; folder rename shortcut uses the default folder template
+- Right-click context menu now performs direct rename without opening the UI (`--direct` flag in registry command)
+- Direct rename results shown as toast notifications when the app is already running (single-instance callback)
+- `perform_direct_rename` function in Rust backend: loads default template, detects item type, and applies rename directly
+
+### Changed
+
+- Replaced single "One-Click Rename" shortcut with two separate shortcuts: "File Rename" and "Folder Rename"
+- Context menu registry command now includes `--direct` flag: `"exe" "--direct" "%1"`
+- Refactored `apply_rename` command: extracted `apply_rename_internal` for reuse by `perform_direct_rename`
+- Added `detect_item_type_internal` helper (no logging) for internal use
+- Shortcut event names changed: `rename-shortcut-changed` split into `file-rename-shortcut-changed` and `folder-rename-shortcut-changed`
+- Direct rename events: `direct-rename-success` and `direct-rename-error` emitted from single-instance callback
+
 ## [0.3.3] - 2026-06-25
 
 ### Added

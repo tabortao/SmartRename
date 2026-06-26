@@ -22,7 +22,8 @@ pub fn install() -> Result<(), String> {
     // Use %1 for file/folder right-click (Windows passes the selected path as %1)
     // For folder background, %V passes the current directory path
     // Using %1 covers both files and folders; folder background passes %V as %1
-    let command = format!("\"{}\" \"%1\"", exe_path);
+    // Use --direct flag so the app renames directly without opening UI
+    let command = format!("\"{}\" \"--direct\" \"%1\"", exe_path);
 
     for (shell_path, cmd_path) in REG_PATHS {
         let (shell_key, _) = hkcu

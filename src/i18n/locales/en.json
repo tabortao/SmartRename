@@ -156,8 +156,10 @@
       "placeholder": "Press key combination",
       "showMain": "Show Main Window",
       "showMainDesc": "Use shortcut to quickly show the main window",
-      "renameShortcut": "One-Click Rename",
-      "renameShortcutDesc": "After selecting files/folders, press shortcut to rename with default template",
+      "fileRename": "File Rename",
+      "fileRenameDesc": "After selecting files in the app, press shortcut to rename with default file template",
+      "folderRename": "Folder Rename",
+      "folderRenameDesc": "After selecting folders in the app, press shortcut to rename with default folder template",
       "setSuccess": "Shortcut set to {{shortcut}}!",
       "cleared": "Shortcut cleared!",
       "conflict": "Shortcut {{shortcut}} is already in use by another application"

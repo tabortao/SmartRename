@@ -17,7 +17,8 @@ import { toast } from "sonner";
 import { Toaster } from "@/components/ui/sonner";
 
 const SHORTCUT_KEY = "global-shortcut-show-main";
-const RENAME_SHORTCUT_KEY = "global-shortcut-rename";
+const FILE_RENAME_SHORTCUT_KEY = "global-shortcut-file-rename";
+const FOLDER_RENAME_SHORTCUT_KEY = "global-shortcut-folder-rename";
 
 export default function HomePage() {
   const { t, i18n } = useTranslation();
@@ -46,7 +47,8 @@ export default function HomePage() {
   const [editorOpen, setEditorOpen] = useState(false);
   const [editingTemplate, setEditingTemplate] = useState<TemplateConfig | null>(null);
   const [isDragOver, setIsDragOver] = useState(false);
-  const [renameShortcutVersion, setRenameShortcutVersion] = useState(0);
+  const [fileRenameShortcutVersion, setFileRenameShortcutVersion] = useState(0);
+  const [folderRenameShortcutVersion, setFolderRenameShortcutVersion] = useState(0);
 
   // Parse template variables for dynamic form
   const [templateVars, setTemplateVars] = useState<import("@/hooks/use-rename").TemplateVariable[]>([]);
@@ -68,36 +70,30 @@ export default function HomePage() {
     console.log("[SmartRename] files changed:", files.length, "files");
   }, [files]);
 
-  // Register/unregister rename shortcut based on file state
+  // Register/unregister file rename shortcut
   useEffect(() => {
-    const registerRenameShortcut = async () => {
-      const savedShortcut = localStorage.getItem(RENAME_SHORTCUT_KEY);
+    const registerFileRenameShortcut = async () => {
+      const savedShortcut = localStorage.getItem(FILE_RENAME_SHORTCUT_KEY);
       if (!savedShortcut) return;
 
-      // Unregister old rename shortcut first
       await unregisterShortcut(savedShortcut);
 
-      if (files.length === 0) {
-        // No files loaded, don't register rename shortcut
-        return;
-      }
+      if (files.length === 0) return;
 
       const result = await registerShortcut(savedShortcut, async () => {
         const currentFiles = filesRef.current;
         if (currentFiles.length === 0) return;
 
         const currentItemType = itemTypeRef.current;
-        if (currentItemType === "mixed") {
+        if (currentItemType !== "file") {
           toast.warning(t("rename.mixedItemsWarning"));
           return;
         }
 
-        // Load default template based on item type
         try {
-          const configKey = currentItemType === "folder" ? "lastFolderTemplateId" : "lastFileTemplateId";
           let defaultTemplateId: string | null = null;
           try {
-            defaultTemplateId = await invoke<string | null>("load_app_config", { key: configKey });
+            defaultTemplateId = await invoke<string | null>("load_app_config", { key: "lastFileTemplateId" });
           } catch { /* ignore */ }
           if (!defaultTemplateId) {
             try {
@@ -108,23 +104,16 @@ export default function HomePage() {
           if (defaultTemplateId) {
             const template = templatesRef.current.find((t) => t.id === defaultTemplateId);
             if (template) {
-              // Check type mismatch
-              if (currentItemType === "folder" && template.pattern.includes("{Ext}")) {
-                toast.warning(t("rename.folderNoExtWarning"));
-                return;
-              }
-              if (currentItemType === "file" && !template.pattern.includes("{Ext}")) {
+              if (!template.pattern.includes("{Ext}")) {
                 toast.warning(t("rename.fileNoExtWarning"));
                 return;
               }
 
-              // Build default var values (e.g. version = "1")
               const defaults: Record<string, string> = {};
               if (template.pattern.includes("{Input:版本号}")) {
                 defaults["版本号"] = "1";
               }
 
-              // Directly invoke apply_rename to avoid React state timing issues
               const results = await invoke<RenameResult[]>("apply_rename", {
                 files: currentFiles,
                 pattern: template.pattern,
@@ -142,18 +131,92 @@ export default function HomePage() {
             }
           }
         } catch (error) {
-          console.error("Rename shortcut failed:", error);
+          console.error("File rename shortcut failed:", error);
         }
         toast.warning(t("settings.templates.none"));
       });
 
       if (!result.success) {
-        console.warn("Rename shortcut conflict:", result.error);
+        console.warn("File rename shortcut conflict:", result.error);
       }
     };
 
-    registerRenameShortcut();
-  }, [files, t, renameShortcutVersion]);
+    registerFileRenameShortcut();
+  }, [files, t, fileRenameShortcutVersion]);
+
+  // Register/unregister folder rename shortcut
+  useEffect(() => {
+    const registerFolderRenameShortcut = async () => {
+      const savedShortcut = localStorage.getItem(FOLDER_RENAME_SHORTCUT_KEY);
+      if (!savedShortcut) return;
+
+      await unregisterShortcut(savedShortcut);
+
+      if (files.length === 0) return;
+
+      const result = await registerShortcut(savedShortcut, async () => {
+        const currentFiles = filesRef.current;
+        if (currentFiles.length === 0) return;
+
+        const currentItemType = itemTypeRef.current;
+        if (currentItemType !== "folder") {
+          toast.warning(t("rename.mixedItemsWarning"));
+          return;
+        }
+
+        try {
+          let defaultTemplateId: string | null = null;
+          try {
+            defaultTemplateId = await invoke<string | null>("load_app_config", { key: "lastFolderTemplateId" });
+          } catch { /* ignore */ }
+          if (!defaultTemplateId) {
+            try {
+              defaultTemplateId = await invoke<string | null>("load_app_config", { key: "lastTemplateId" });
+            } catch { /* ignore */ }
+          }
+
+          if (defaultTemplateId) {
+            const template = templatesRef.current.find((t) => t.id === defaultTemplateId);
+            if (template) {
+              if (template.pattern.includes("{Ext}")) {
+                toast.warning(t("rename.folderNoExtWarning"));
+                return;
+              }
+
+              const defaults: Record<string, string> = {};
+              if (template.pattern.includes("{Input:版本号}")) {
+                defaults["版本号"] = "1";
+              }
+
+              const results = await invoke<RenameResult[]>("apply_rename", {
+                files: currentFiles,
+                pattern: template.pattern,
+                varValues: defaults,
+                counterStart: 1,
+              });
+              const successCount = results.filter((r) => r.success).length;
+              const failCount = results.filter((r) => !r.success).length;
+              if (failCount === 0) {
+                toast.success(t("rename.successRenamed", { count: successCount }));
+              } else {
+                toast.warning(t("rename.partialRename", { success: successCount, failed: failCount }));
+              }
+              return;
+            }
+          }
+        } catch (error) {
+          console.error("Folder rename shortcut failed:", error);
+        }
+        toast.warning(t("settings.templates.none"));
+      });
+
+      if (!result.success) {
+        console.warn("Folder rename shortcut conflict:", result.error);
+      }
+    };
+
+    registerFolderRenameShortcut();
+  }, [files, t, folderRenameShortcutVersion]);
 
   // Listen for new files from single-instance callback (right-click context menu)
   // Separated into its own useEffect to avoid listener re-registration issues
@@ -199,11 +262,17 @@ export default function HomePage() {
       }
     );
 
-    const unlistenRenameShortcutChanged = listen<{ shortcut: string }>(
-      "rename-shortcut-changed",
+    const unlistenFileRenameShortcutChanged = listen<{ shortcut: string }>(
+      "file-rename-shortcut-changed",
       async (_event) => {
-        // Trigger re-registration of the rename shortcut via version bump
-        setRenameShortcutVersion((v) => v + 1);
+        setFileRenameShortcutVersion((v) => v + 1);
+      }
+    );
+
+    const unlistenFolderRenameShortcutChanged = listen<{ shortcut: string }>(
+      "folder-rename-shortcut-changed",
+      async (_event) => {
+        setFolderRenameShortcutVersion((v) => v + 1);
       }
     );
 
@@ -213,6 +282,14 @@ export default function HomePage() {
         i18n.changeLanguage(event.payload.language);
       }
     );
+
+    // Listen for direct rename results from context menu (single-instance callback)
+    const unlistenDirectRenameSuccess = listen<string>("direct-rename-success", (event) => {
+      toast.success(event.payload);
+    });
+    const unlistenDirectRenameError = listen<string>("direct-rename-error", (event) => {
+      toast.error(event.payload);
+    });
 
     // Drag-drop event listeners (Tauri built-in)
     const unlistenFileDrop = listen<{ paths: string[] }>("tauri://drag-drop", (event) => {
@@ -230,8 +307,11 @@ export default function HomePage() {
 
     return () => {
       unlistenShortcutChanged.then((fn) => fn());
-      unlistenRenameShortcutChanged.then((fn) => fn());
+      unlistenFileRenameShortcutChanged.then((fn) => fn());
+      unlistenFolderRenameShortcutChanged.then((fn) => fn());
       unlistenLanguageChanged.then((fn) => fn());
+      unlistenDirectRenameSuccess.then((fn) => fn());
+      unlistenDirectRenameError.then((fn) => fn());
       unlistenFileDrop.then((fn) => fn());
       unlistenFileDropHover.then((fn) => fn());
       unlistenFileDropLeave.then((fn) => fn());

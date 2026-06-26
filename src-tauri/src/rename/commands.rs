@@ -245,15 +245,14 @@ pub fn preview_rename(
     template::preview_rename(&files, &pattern, &var_values, counter_start)
 }
 
-/// Apply rename to files
-#[tauri::command]
-pub fn apply_rename(
-    files: Vec<String>,
-    pattern: String,
-    var_values: HashMap<String, String>,
+/// Internal rename logic (shared by apply_rename command and direct_rename)
+fn apply_rename_internal(
+    files: &[String],
+    pattern: &str,
+    var_values: &HashMap<String, String>,
     counter_start: u32,
 ) -> Vec<RenameResult> {
-    let previews = template::preview_rename(&files, &pattern, &var_values, counter_start);
+    let previews = template::preview_rename(files, pattern, var_values, counter_start);
     let mut results = Vec::new();
 
     for (i, file_path) in files.iter().enumerate() {
@@ -312,6 +311,92 @@ pub fn apply_rename(
     }
 
     results
+}
+
+/// Apply rename to files
+#[tauri::command]
+pub fn apply_rename(
+    files: Vec<String>,
+    pattern: String,
+    var_values: HashMap<String, String>,
+    counter_start: u32,
+) -> Vec<RenameResult> {
+    apply_rename_internal(&files, &pattern, &var_values, counter_start)
+}
+
+/// Perform direct rename from context menu without opening UI
+/// Returns a status message string
+pub fn perform_direct_rename(app: &AppHandle, paths: Vec<String>) -> Result<String, String> {
+    if paths.is_empty() {
+        return Err("No files provided".to_string());
+    }
+
+    // Detect item type
+    let item_type = detect_item_type_internal(&paths);
+    if item_type == "mixed" {
+        return Err("Mixed files and folders are not supported for direct rename".to_string());
+    }
+
+    // Load default template config
+    let config_key = if item_type == "folder" { "lastFolderTemplateId" } else { "lastFileTemplateId" };
+    let config = load_config()?;
+    let template_id = config.get(config_key)
+        .or_else(|| config.get("lastTemplateId"))
+        .ok_or_else(|| "No default template configured. Please set a default template in Settings.".to_string())?;
+
+    // Load template
+    let templates = load_templates(app)?;
+    let template = templates.iter().find(|t| t.id == *template_id)
+        .ok_or_else(|| "Default template not found. Please check your template settings.".to_string())?;
+
+    // Check type compatibility
+    if item_type == "folder" && template.pattern.contains("{Ext}") {
+        return Err("Cannot use a file template for folders".to_string());
+    }
+    if item_type == "file" && !template.pattern.contains("{Ext}") {
+        return Err("Cannot use a folder template for files".to_string());
+    }
+
+    // Build default var values (e.g. version = "1")
+    let mut var_values = HashMap::new();
+    var_values.insert("版本号".to_string(), "1".to_string());
+
+    // Apply rename
+    let results = apply_rename_internal(&paths, &template.pattern, &var_values, 1);
+
+    let success = results.iter().filter(|r| r.success).count();
+    let failed = results.iter().filter(|r| !r.success).count();
+
+    if failed > 0 {
+        let errors: Vec<String> = results.iter()
+            .filter(|r| !r.success)
+            .map(|r| format!("{}: {}", r.original, r.error.as_deref().unwrap_or("unknown")))
+            .collect();
+        Err(format!("Renamed {} items, {} failed: {}", success, failed, errors.join("; ")))
+    } else {
+        let item_label = if item_type == "folder" { "folders" } else { "files" };
+        Ok(format!("Successfully renamed {} {}", success, item_label))
+    }
+}
+
+/// Internal item type detection (no logging)
+fn detect_item_type_internal(paths: &[String]) -> String {
+    use super::file_utils;
+    let mut has_file = false;
+    let mut has_folder = false;
+
+    for path in paths {
+        if file_utils::is_directory(path) {
+            has_folder = true;
+        } else {
+            has_file = true;
+        }
+        if has_file && has_folder {
+            return "mixed".to_string();
+        }
+    }
+
+    if has_folder { "folder".to_string() } else { "file".to_string() }
 }
 
 /// Get all templates
