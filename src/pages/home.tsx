@@ -10,15 +10,13 @@ import { DynamicForm } from "@/components/rename/dynamic-form";
 import { TemplateSelector } from "@/components/rename/template-selector";
 import { TemplateEditorDialog } from "@/components/rename/template-editor-dialog";
 import { RenameControls } from "@/components/rename/rename-controls";
-import { registerShortcut, unregisterShortcut } from "@/lib/shortcut";
+import { registerShortcut } from "@/lib/shortcut";
 import { toggleWindow } from "@/lib/window";
-import { useRename, type TemplateConfig, type RenameResult } from "@/hooks/use-rename";
+import { useRename, type TemplateConfig } from "@/hooks/use-rename";
 import { toast } from "sonner";
 import { Toaster } from "@/components/ui/sonner";
 
 const SHORTCUT_KEY = "global-shortcut-show-main";
-const FILE_RENAME_SHORTCUT_KEY = "global-shortcut-file-rename";
-const FOLDER_RENAME_SHORTCUT_KEY = "global-shortcut-folder-rename";
 
 export default function HomePage() {
   const { t, i18n } = useTranslation();
@@ -39,16 +37,11 @@ export default function HomePage() {
     clearFiles,
     replaceFiles,
     reloadTemplates,
-    filesRef,
-    templatesRef,
-    itemTypeRef,
   } = useRename();
 
   const [editorOpen, setEditorOpen] = useState(false);
   const [editingTemplate, setEditingTemplate] = useState<TemplateConfig | null>(null);
   const [isDragOver, setIsDragOver] = useState(false);
-  const [fileRenameShortcutVersion, setFileRenameShortcutVersion] = useState(0);
-  const [folderRenameShortcutVersion, setFolderRenameShortcutVersion] = useState(0);
 
   // Parse template variables for dynamic form
   const [templateVars, setTemplateVars] = useState<import("@/hooks/use-rename").TemplateVariable[]>([]);
@@ -69,154 +62,6 @@ export default function HomePage() {
   useEffect(() => {
     console.log("[SmartRename] files changed:", files.length, "files");
   }, [files]);
-
-  // Register/unregister file rename shortcut
-  useEffect(() => {
-    const registerFileRenameShortcut = async () => {
-      const savedShortcut = localStorage.getItem(FILE_RENAME_SHORTCUT_KEY);
-      if (!savedShortcut) return;
-
-      await unregisterShortcut(savedShortcut);
-
-      if (files.length === 0) return;
-
-      const result = await registerShortcut(savedShortcut, async () => {
-        const currentFiles = filesRef.current;
-        if (currentFiles.length === 0) return;
-
-        const currentItemType = itemTypeRef.current;
-        if (currentItemType !== "file") {
-          toast.warning(t("rename.mixedItemsWarning"));
-          return;
-        }
-
-        try {
-          let defaultTemplateId: string | null = null;
-          try {
-            defaultTemplateId = await invoke<string | null>("load_app_config", { key: "lastFileTemplateId" });
-          } catch { /* ignore */ }
-          if (!defaultTemplateId) {
-            try {
-              defaultTemplateId = await invoke<string | null>("load_app_config", { key: "lastTemplateId" });
-            } catch { /* ignore */ }
-          }
-
-          if (defaultTemplateId) {
-            const template = templatesRef.current.find((t) => t.id === defaultTemplateId);
-            if (template) {
-              if (!template.pattern.includes("{Ext}")) {
-                toast.warning(t("rename.fileNoExtWarning"));
-                return;
-              }
-
-              const defaults: Record<string, string> = {};
-              if (template.pattern.includes("{Input:版本号}")) {
-                defaults["版本号"] = "1";
-              }
-
-              const results = await invoke<RenameResult[]>("apply_rename", {
-                files: currentFiles,
-                pattern: template.pattern,
-                varValues: defaults,
-                counterStart: 1,
-              });
-              const successCount = results.filter((r) => r.success).length;
-              const failCount = results.filter((r) => !r.success).length;
-              if (failCount === 0) {
-                toast.success(t("rename.successRenamed", { count: successCount }));
-              } else {
-                toast.warning(t("rename.partialRename", { success: successCount, failed: failCount }));
-              }
-              return;
-            }
-          }
-        } catch (error) {
-          console.error("File rename shortcut failed:", error);
-        }
-        toast.warning(t("settings.templates.none"));
-      });
-
-      if (!result.success) {
-        console.warn("File rename shortcut conflict:", result.error);
-      }
-    };
-
-    registerFileRenameShortcut();
-  }, [files, t, fileRenameShortcutVersion]);
-
-  // Register/unregister folder rename shortcut
-  useEffect(() => {
-    const registerFolderRenameShortcut = async () => {
-      const savedShortcut = localStorage.getItem(FOLDER_RENAME_SHORTCUT_KEY);
-      if (!savedShortcut) return;
-
-      await unregisterShortcut(savedShortcut);
-
-      if (files.length === 0) return;
-
-      const result = await registerShortcut(savedShortcut, async () => {
-        const currentFiles = filesRef.current;
-        if (currentFiles.length === 0) return;
-
-        const currentItemType = itemTypeRef.current;
-        if (currentItemType !== "folder") {
-          toast.warning(t("rename.mixedItemsWarning"));
-          return;
-        }
-
-        try {
-          let defaultTemplateId: string | null = null;
-          try {
-            defaultTemplateId = await invoke<string | null>("load_app_config", { key: "lastFolderTemplateId" });
-          } catch { /* ignore */ }
-          if (!defaultTemplateId) {
-            try {
-              defaultTemplateId = await invoke<string | null>("load_app_config", { key: "lastTemplateId" });
-            } catch { /* ignore */ }
-          }
-
-          if (defaultTemplateId) {
-            const template = templatesRef.current.find((t) => t.id === defaultTemplateId);
-            if (template) {
-              if (template.pattern.includes("{Ext}")) {
-                toast.warning(t("rename.folderNoExtWarning"));
-                return;
-              }
-
-              const defaults: Record<string, string> = {};
-              if (template.pattern.includes("{Input:版本号}")) {
-                defaults["版本号"] = "1";
-              }
-
-              const results = await invoke<RenameResult[]>("apply_rename", {
-                files: currentFiles,
-                pattern: template.pattern,
-                varValues: defaults,
-                counterStart: 1,
-              });
-              const successCount = results.filter((r) => r.success).length;
-              const failCount = results.filter((r) => !r.success).length;
-              if (failCount === 0) {
-                toast.success(t("rename.successRenamed", { count: successCount }));
-              } else {
-                toast.warning(t("rename.partialRename", { success: successCount, failed: failCount }));
-              }
-              return;
-            }
-          }
-        } catch (error) {
-          console.error("Folder rename shortcut failed:", error);
-        }
-        toast.warning(t("settings.templates.none"));
-      });
-
-      if (!result.success) {
-        console.warn("Folder rename shortcut conflict:", result.error);
-      }
-    };
-
-    registerFolderRenameShortcut();
-  }, [files, t, folderRenameShortcutVersion]);
 
   // Listen for new files from single-instance callback (right-click context menu)
   // Separated into its own useEffect to avoid listener re-registration issues
@@ -262,20 +107,6 @@ export default function HomePage() {
       }
     );
 
-    const unlistenFileRenameShortcutChanged = listen<{ shortcut: string }>(
-      "file-rename-shortcut-changed",
-      async (_event) => {
-        setFileRenameShortcutVersion((v) => v + 1);
-      }
-    );
-
-    const unlistenFolderRenameShortcutChanged = listen<{ shortcut: string }>(
-      "folder-rename-shortcut-changed",
-      async (_event) => {
-        setFolderRenameShortcutVersion((v) => v + 1);
-      }
-    );
-
     const unlistenLanguageChanged = listen<{ language: string }>(
       "language-changed",
       (event) => {
@@ -307,8 +138,6 @@ export default function HomePage() {
 
     return () => {
       unlistenShortcutChanged.then((fn) => fn());
-      unlistenFileRenameShortcutChanged.then((fn) => fn());
-      unlistenFolderRenameShortcutChanged.then((fn) => fn());
       unlistenLanguageChanged.then((fn) => fn());
       unlistenDirectRenameSuccess.then((fn) => fn());
       unlistenDirectRenameError.then((fn) => fn());

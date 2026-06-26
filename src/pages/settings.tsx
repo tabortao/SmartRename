@@ -20,16 +20,12 @@ import type { TemplateConfig } from "@/hooks/use-rename";
 import { getTemplateDisplayName } from "@/hooks/use-rename";
 
 const SHORTCUT_KEY = "global-shortcut-show-main";
-const FILE_RENAME_SHORTCUT_KEY = "global-shortcut-file-rename";
-const FOLDER_RENAME_SHORTCUT_KEY = "global-shortcut-folder-rename";
 
 type SettingSection = "appearance" | "shortcut" | "templates";
 type TemplateTab = "file" | "folder";
 
 export default function SettingsPage() {
   const [shortcut, setShortcut] = useState<string>("");
-  const [fileRenameShortcut, setFileRenameShortcut] = useState<string>("");
-  const [folderRenameShortcut, setFolderRenameShortcut] = useState<string>("");
   const [activeSection, setActiveSection] = useState<SettingSection>("appearance");
   const { t, i18n } = useTranslation();
   const { theme, setTheme } = useTheme();
@@ -58,14 +54,6 @@ export default function SettingsPage() {
           console.warn("Show main shortcut conflict on init:", result.error);
         }
       });
-    }
-    const savedFileRenameShortcut = localStorage.getItem(FILE_RENAME_SHORTCUT_KEY);
-    if (savedFileRenameShortcut) {
-      setFileRenameShortcut(savedFileRenameShortcut);
-    }
-    const savedFolderRenameShortcut = localStorage.getItem(FOLDER_RENAME_SHORTCUT_KEY);
-    if (savedFolderRenameShortcut) {
-      setFolderRenameShortcut(savedFolderRenameShortcut);
     }
   }, [handleShowMainWindow]);
 
@@ -169,42 +157,6 @@ export default function SettingsPage() {
         await unregisterShortcut(oldShortcut);
       }
       await emit("shortcut-changed", { shortcut: "" });
-      toast.info(t("settings.shortcut.cleared"));
-    }
-  };
-
-  const handleFileRenameShortcutChange = async (newShortcut: string) => {
-    const oldShortcut = fileRenameShortcut;
-    setFileRenameShortcut(newShortcut);
-
-    if (newShortcut) {
-      localStorage.setItem(FILE_RENAME_SHORTCUT_KEY, newShortcut);
-      await emit("file-rename-shortcut-changed", { shortcut: newShortcut });
-      toast.success(t("settings.shortcut.setSuccess", { shortcut: newShortcut }));
-    } else {
-      localStorage.removeItem(FILE_RENAME_SHORTCUT_KEY);
-      if (oldShortcut) {
-        await unregisterShortcut(oldShortcut);
-      }
-      await emit("file-rename-shortcut-changed", { shortcut: "" });
-      toast.info(t("settings.shortcut.cleared"));
-    }
-  };
-
-  const handleFolderRenameShortcutChange = async (newShortcut: string) => {
-    const oldShortcut = folderRenameShortcut;
-    setFolderRenameShortcut(newShortcut);
-
-    if (newShortcut) {
-      localStorage.setItem(FOLDER_RENAME_SHORTCUT_KEY, newShortcut);
-      await emit("folder-rename-shortcut-changed", { shortcut: newShortcut });
-      toast.success(t("settings.shortcut.setSuccess", { shortcut: newShortcut }));
-    } else {
-      localStorage.removeItem(FOLDER_RENAME_SHORTCUT_KEY);
-      if (oldShortcut) {
-        await unregisterShortcut(oldShortcut);
-      }
-      await emit("folder-rename-shortcut-changed", { shortcut: "" });
       toast.info(t("settings.shortcut.cleared"));
     }
   };
@@ -375,27 +327,6 @@ export default function SettingsPage() {
 
                 <div className="border-t" />
 
-                <div className="flex items-center justify-between py-2.5">
-                  <div className="flex-1">
-                    <label className="text-sm font-medium">{t("settings.shortcut.fileRename")}</label>
-                    <p className="text-muted-foreground mt-0.5 text-xs">
-                      {t("settings.shortcut.fileRenameDesc")}
-                    </p>
-                  </div>
-                  <ShortcutInput value={fileRenameShortcut} onChange={handleFileRenameShortcutChange} />
-                </div>
-
-                <div className="border-t" />
-
-                <div className="flex items-center justify-between py-2.5">
-                  <div className="flex-1">
-                    <label className="text-sm font-medium">{t("settings.shortcut.folderRename")}</label>
-                    <p className="text-muted-foreground mt-0.5 text-xs">
-                      {t("settings.shortcut.folderRenameDesc")}
-                    </p>
-                  </div>
-                  <ShortcutInput value={folderRenameShortcut} onChange={handleFolderRenameShortcutChange} />
-                </div>
               </div>
             </div>
           )}
