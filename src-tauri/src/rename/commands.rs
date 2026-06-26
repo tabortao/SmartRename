@@ -69,47 +69,47 @@ fn get_templates_path(app: &AppHandle) -> Result<PathBuf, String> {
 /// Designed as a document organizer's toolkit for efficient file naming
 fn get_default_templates() -> Vec<TemplateConfig> {
     vec![
-        // 1. 日期_主题 / Date_Topic
-        // Example: 20260624_季度总结报告.docx
+        // 1. 日期 主题 / Date Topic
+        // Example: 20260624 季度总结报告.docx
         TemplateConfig {
             id: uuid::Uuid::new_v4().to_string(),
-            name: "日期_主题".to_string(),
-            name_zh: "日期_主题".to_string(),
-            name_en: "Date_Topic".to_string(),
-            pattern: "{Date:YYYYMMDD}_{Input:主题}.{Ext}".to_string(),
+            name: "日期 主题".to_string(),
+            name_zh: "日期 主题".to_string(),
+            name_en: "Date Topic".to_string(),
+            pattern: "{Date:YYYYMMDD} {Input:主题}.{Ext}".to_string(),
             created_at: chrono::Local::now().to_rfc3339(),
             updated_at: chrono::Local::now().to_rfc3339(),
         },
-        // 2. 日期_主题_版本 / Date_Topic_Version
-        // Example: 20260624_季度总结报告_v2.1.docx
+        // 2. 日期 主题_版本 / Date Topic_Version
+        // Example: 20260624 季度总结报告_v2.1.docx
         TemplateConfig {
             id: uuid::Uuid::new_v4().to_string(),
-            name: "日期_主题_版本".to_string(),
-            name_zh: "日期_主题_版本".to_string(),
-            name_en: "Date_Topic_Version".to_string(),
-            pattern: "{Date:YYYYMMDD}_{Input:主题}_v{Input:版本号}.{Ext}".to_string(),
+            name: "日期 主题_版本".to_string(),
+            name_zh: "日期 主题_版本".to_string(),
+            name_en: "Date Topic_Version".to_string(),
+            pattern: "{Date:YYYYMMDD} {Input:主题}_v{Input:版本号}.{Ext}".to_string(),
             created_at: chrono::Local::now().to_rfc3339(),
             updated_at: chrono::Local::now().to_rfc3339(),
         },
-        // 3. 日期_主题-备注 / Date_Topic-Note
-        // Example: 20260624_季度总结报告-市场部.docx
+        // 3. 日期 主题-备注 / Date Topic-Note
+        // Example: 20260624 季度总结报告-市场部.docx
         TemplateConfig {
             id: uuid::Uuid::new_v4().to_string(),
-            name: "日期_主题-备注".to_string(),
-            name_zh: "日期_主题-备注".to_string(),
-            name_en: "Date_Topic-Note".to_string(),
-            pattern: "{Date:YYYYMMDD}_{Input:主题}-{Input:备注}.{Ext}".to_string(),
+            name: "日期 主题-备注".to_string(),
+            name_zh: "日期 主题-备注".to_string(),
+            name_en: "Date Topic-Note".to_string(),
+            pattern: "{Date:YYYYMMDD} {Input:主题}-{Input:备注}.{Ext}".to_string(),
             created_at: chrono::Local::now().to_rfc3339(),
             updated_at: chrono::Local::now().to_rfc3339(),
         },
-        // 4. 日期_主题-备注_版本 / Date_Topic-Note_Version
-        // Example: 20260624_季度总结报告-市场部_v2.1.docx
+        // 4. 日期 主题-备注_版本 / Date Topic-Note_Version
+        // Example: 20260624 季度总结报告-市场部_v2.1.docx
         TemplateConfig {
             id: uuid::Uuid::new_v4().to_string(),
-            name: "日期_主题-备注_版本".to_string(),
-            name_zh: "日期_主题-备注_版本".to_string(),
-            name_en: "Date_Topic-Note_Version".to_string(),
-            pattern: "{Date:YYYYMMDD}_{Input:主题}-{Input:备注}_v{Input:版本号}.{Ext}".to_string(),
+            name: "日期 主题-备注_版本".to_string(),
+            name_zh: "日期 主题-备注_版本".to_string(),
+            name_en: "Date Topic-Note_Version".to_string(),
+            pattern: "{Date:YYYYMMDD} {Input:主题}-{Input:备注}_v{Input:版本号}.{Ext}".to_string(),
             created_at: chrono::Local::now().to_rfc3339(),
             updated_at: chrono::Local::now().to_rfc3339(),
         },
@@ -124,26 +124,26 @@ fn get_default_templates() -> Vec<TemplateConfig> {
             created_at: chrono::Local::now().to_rfc3339(),
             updated_at: chrono::Local::now().to_rfc3339(),
         },
-        // 6. 日期_原文件名_版本 / Date_OriginalName_Version
-        // Example: 20260624_draft_v1.0.docx
+        // 6. 日期 原文件名_版本 / Date OriginalName_Version
+        // Example: 20260624 draft_v1.0.docx
         TemplateConfig {
             id: uuid::Uuid::new_v4().to_string(),
-            name: "日期_原文件名_版本".to_string(),
-            name_zh: "日期_原文件名_版本".to_string(),
-            name_en: "Date_OriginalName_Version".to_string(),
-            pattern: "{Date:YYYYMMDD}_{OriginalName}_v{Input:版本号}.{Ext}".to_string(),
+            name: "日期 原文件名_版本".to_string(),
+            name_zh: "日期 原文件名_版本".to_string(),
+            name_en: "Date OriginalName_Version".to_string(),
+            pattern: "{Date:YYYYMMDD} {OriginalName}_v{Input:版本号}.{Ext}".to_string(),
             created_at: chrono::Local::now().to_rfc3339(),
             updated_at: chrono::Local::now().to_rfc3339(),
         },
         // ===== Folder templates (no {Ext}) =====
-        // 7. 日期_原文件夹名 / Date_OriginalFolderName
-        // Example: 20260624_项目资料
+        // 7. 日期 原文件夹名 / Date OriginalFolderName
+        // Example: 20260624 项目资料
         TemplateConfig {
             id: uuid::Uuid::new_v4().to_string(),
-            name: "日期_原文件夹名".to_string(),
-            name_zh: "日期_原文件夹名".to_string(),
-            name_en: "Date_OriginalFolderName".to_string(),
-            pattern: "{Date:YYYYMMDD}_{OriginalName}".to_string(),
+            name: "日期 原文件夹名".to_string(),
+            name_zh: "日期 原文件夹名".to_string(),
+            name_en: "Date OriginalFolderName".to_string(),
+            pattern: "{Date:YYYYMMDD} {OriginalName}".to_string(),
             created_at: chrono::Local::now().to_rfc3339(),
             updated_at: chrono::Local::now().to_rfc3339(),
         },
@@ -190,8 +190,49 @@ fn load_templates(app: &AppHandle) -> Result<Vec<TemplateConfig>, String> {
     templates.retain(|t| !t.name.starts_with('{') || !t.name.contains(":}"));
     let mut changed = before != templates.len();
 
-    // Migrate: add missing system default templates
+    // Migrate: add missing system default templates, rename old-named ones
     let defaults = get_default_templates();
+    // Map of old template names to new names (updated in v0.3.4: 日期_ → 日期 )
+    let name_renames: Vec<(&str, &str)> = vec![
+        ("日期_主题", "日期 主题"),
+        ("日期_主题_版本", "日期 主题_版本"),
+        ("日期_主题-备注", "日期 主题-备注"),
+        ("日期_主题-备注_版本", "日期 主题-备注_版本"),
+        ("日期_原文件名_版本", "日期 原文件名_版本"),
+        ("日期_原文件夹名", "日期 原文件夹名"),
+    ];
+    for (old_name, new_name) in &name_renames {
+        // Rename existing template with old name to new name
+        if let Some(t) = templates.iter_mut().find(|t| t.name == *old_name || t.name_zh == *old_name) {
+            if t.name == *old_name {
+                t.name = new_name.to_string();
+            }
+            if t.name_zh == *old_name {
+                t.name_zh = new_name.to_string();
+            }
+            // Also update English name: replace first underscore after "Date" with space
+            t.name_en = t.name_en.replacen("Date_", "Date ", 1);
+            t.name_en = t.name_en.replacen("Date ", "Date ", 1); // no-op if already done
+            // Update pattern: replace first {Date:YYYYMMDD}_ with {Date:YYYYMMDD} 
+            t.pattern = t.pattern.replacen("{Date:YYYYMMDD}_", "{Date:YYYYMMDD} ", 1);
+            t.updated_at = chrono::Local::now().to_rfc3339();
+            changed = true;
+        }
+    }
+    // Also update English name for folder template
+    if let Some(t) = templates.iter_mut().find(|t| t.name_en == "Date_OriginalFolderName") {
+        t.name_en = "Date OriginalFolderName".to_string();
+        t.updated_at = chrono::Local::now().to_rfc3339();
+        changed = true;
+    }
+    // Remove duplicates that may have been created by previous migrations
+    // (keep the first occurrence, which is the renamed original template)
+    let mut seen_names = std::collections::HashSet::new();
+    let before_dedup = templates.len();
+    templates.retain(|t| seen_names.insert(t.name.clone()));
+    if templates.len() != before_dedup {
+        changed = true;
+    }
     for default in &defaults {
         if !templates.iter().any(|t| t.name == default.name) {
             templates.push(default.clone());

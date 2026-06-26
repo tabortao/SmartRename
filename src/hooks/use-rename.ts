@@ -124,7 +124,7 @@ export function useRename() {
         // Fallback to type-specific defaults
         if (detectedType === "file") {
           const defaultTemplate = templatesRef.current.find(
-            (t) => t.name === "日期_原文件名_版本" || t.name_zh === "日期_原文件名_版本"
+            (t) => t.name === "日期 原文件名_版本" || t.name_zh === "日期 原文件名_版本"
           );
           if (defaultTemplate) {
             selectTemplate(defaultTemplate);
@@ -132,7 +132,7 @@ export function useRename() {
           }
         } else if (detectedType === "folder") {
           const defaultTemplate = templatesRef.current.find(
-            (t) => t.name === "日期_原文件夹名" || t.name_zh === "日期_原文件夹名"
+            (t) => t.name === "日期 原文件夹名" || t.name_zh === "日期 原文件夹名"
           );
           if (defaultTemplate) {
             selectTemplate(defaultTemplate);

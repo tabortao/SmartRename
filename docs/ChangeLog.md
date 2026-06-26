@@ -19,6 +19,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Refactored `apply_rename` command: extracted `apply_rename_internal` for reuse by `perform_direct_rename`
 - Added `detect_item_type_internal` helper (no logging) for internal use
 - Direct rename events: `direct-rename-success` and `direct-rename-error` emitted from single-instance callback
+- Default file templates: `日期_` prefix changed to `日期 ` (with space) in Chinese names, English names, and template patterns
+- Default folder template: `日期_原文件夹名` → `日期 原文件夹名` (underscore → space) in name and pattern
+- Default template selection: file defaults to "日期 原文件名_版本", folder defaults to "日期 原文件夹名"
+- Fixed pre-existing variable name bugs: `defaultFolder` → `folderDefault`, `defaultFile` → `fileDefault` in settings.tsx
 
 ### Removed
 

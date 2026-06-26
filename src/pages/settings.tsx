@@ -67,31 +67,37 @@ export default function SettingsPage() {
         // Load default template IDs, fallback to hardcoded defaults
         try {
           const fileDef = await invoke<string | null>("load_app_config", { key: "lastFileTemplateId" });
-          if (fileDef) {
+          // Validate the ID exists in the current template list
+          const fileTemplatesList = list.filter((t) => t.pattern.includes("{Ext}"));
+          const fileExists = fileDef ? fileTemplatesList.some((t) => t.id === fileDef) : false;
+          if (fileDef && fileExists) {
             setDefaultFileTemplateId(fileDef);
           } else {
-            // Fallback to "日期_原文件名_版本" template
-            const defaultFile = list.find(
-              (t) => t.name === "日期_原文件名_版本" || t.name_zh === "日期_原文件名_版本"
+            // Fallback to "日期 原文件名_版本" template
+            const fileDefault = fileTemplatesList.find(
+              (t) => t.name === "日期 原文件名_版本" || t.name_zh === "日期 原文件名_版本"
             );
-            if (defaultFile) {
-              setDefaultFileTemplateId(defaultFile.id);
-              await invoke("save_app_config", { key: "lastFileTemplateId", value: defaultFile.id });
+            if (fileDefault) {
+              setDefaultFileTemplateId(fileDefault.id);
+              await invoke("save_app_config", { key: "lastFileTemplateId", value: fileDefault.id });
             }
           }
         } catch { /* ignore */ }
         try {
           const folderDef = await invoke<string | null>("load_app_config", { key: "lastFolderTemplateId" });
-          if (folderDef) {
+          // Validate the ID exists in the current template list
+          const folderTemplatesList = list.filter((t) => !t.pattern.includes("{Ext}"));
+          const folderExists = folderDef ? folderTemplatesList.some((t) => t.id === folderDef) : false;
+          if (folderDef && folderExists) {
             setDefaultFolderTemplateId(folderDef);
           } else {
-            // Fallback to "日期_原文件夹名" template
-            const defaultFolder = list.find(
-              (t) => t.name === "日期_原文件夹名" || t.name_zh === "日期_原文件夹名"
+            // Fallback to "日期 原文件夹名" template
+            const folderDefault = folderTemplatesList.find(
+              (t) => t.name === "日期 原文件夹名" || t.name_zh === "日期 原文件夹名"
             );
-            if (defaultFolder) {
-              setDefaultFolderTemplateId(defaultFolder.id);
-              await invoke("save_app_config", { key: "lastFolderTemplateId", value: defaultFolder.id });
+            if (folderDefault) {
+              setDefaultFolderTemplateId(folderDefault.id);
+              await invoke("save_app_config", { key: "lastFolderTemplateId", value: folderDefault.id });
             }
           }
         } catch { /* ignore */ }
