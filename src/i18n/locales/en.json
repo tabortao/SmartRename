@@ -159,7 +159,8 @@
       "renameShortcut": "One-Click Rename",
       "renameShortcutDesc": "After selecting files/folders, press shortcut to rename with default template",
       "setSuccess": "Shortcut set to {{shortcut}}!",
-      "cleared": "Shortcut cleared!"
+      "cleared": "Shortcut cleared!",
+      "conflict": "Shortcut {{shortcut}} is already in use by another application"
     },
     "templates": {
       "title": "Templates",
@@ -173,6 +174,8 @@
       "fileTemplates": "File Templates",
       "folderTemplates": "Folder Templates",
       "defaultTemplates": "Default Templates",
+      "file": "File",
+      "folder": "Folder",
       "none": "None"
     }
   },

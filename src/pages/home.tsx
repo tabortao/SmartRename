@@ -12,7 +12,7 @@ import { TemplateEditorDialog } from "@/components/rename/template-editor-dialog
 import { RenameControls } from "@/components/rename/rename-controls";
 import { registerShortcut, unregisterShortcut } from "@/lib/shortcut";
 import { toggleWindow } from "@/lib/window";
-import { useRename, type TemplateConfig } from "@/hooks/use-rename";
+import { useRename, type TemplateConfig, type RenameResult } from "@/hooks/use-rename";
 import { toast } from "sonner";
 import { Toaster } from "@/components/ui/sonner";
 
@@ -38,8 +38,6 @@ export default function HomePage() {
     clearFiles,
     replaceFiles,
     reloadTemplates,
-    applyRenameRef,
-    selectTemplateRef,
     filesRef,
     templatesRef,
     itemTypeRef,
@@ -84,7 +82,7 @@ export default function HomePage() {
         return;
       }
 
-      await registerShortcut(savedShortcut, async () => {
+      const result = await registerShortcut(savedShortcut, async () => {
         const currentFiles = filesRef.current;
         if (currentFiles.length === 0) return;
 
@@ -120,17 +118,26 @@ export default function HomePage() {
                 return;
               }
 
-              selectTemplateRef.current(template);
-              setTimeout(async () => {
-                const results = await applyRenameRef.current();
-                const successCount = results.filter((r) => r.success).length;
-                const failCount = results.filter((r) => !r.success).length;
-                if (failCount === 0) {
-                  toast.success(t("rename.successRenamed", { count: successCount }));
-                } else {
-                  toast.warning(t("rename.partialRename", { success: successCount, failed: failCount }));
-                }
-              }, 100);
+              // Build default var values (e.g. version = "1")
+              const defaults: Record<string, string> = {};
+              if (template.pattern.includes("{Input:版本号}")) {
+                defaults["版本号"] = "1";
+              }
+
+              // Directly invoke apply_rename to avoid React state timing issues
+              const results = await invoke<RenameResult[]>("apply_rename", {
+                files: currentFiles,
+                pattern: template.pattern,
+                varValues: defaults,
+                counterStart: 1,
+              });
+              const successCount = results.filter((r) => r.success).length;
+              const failCount = results.filter((r) => !r.success).length;
+              if (failCount === 0) {
+                toast.success(t("rename.successRenamed", { count: successCount }));
+              } else {
+                toast.warning(t("rename.partialRename", { success: successCount, failed: failCount }));
+              }
               return;
             }
           }
@@ -139,6 +146,10 @@ export default function HomePage() {
         }
         toast.warning(t("settings.templates.none"));
       });
+
+      if (!result.success) {
+        console.warn("Rename shortcut conflict:", result.error);
+      }
     };
 
     registerRenameShortcut();
@@ -178,9 +189,12 @@ export default function HomePage() {
       async (event) => {
         const newShortcut = event.payload.shortcut;
         if (newShortcut) {
-          await registerShortcut(newShortcut, async () => {
+          const result = await registerShortcut(newShortcut, async () => {
             await toggleWindow("main");
           });
+          if (!result.success) {
+            console.warn("Show main shortcut conflict:", result.error);
+          }
         }
       }
     );
@@ -244,9 +258,12 @@ export default function HomePage() {
     const initShortcut = async () => {
       const savedShortcut = localStorage.getItem(SHORTCUT_KEY);
       if (savedShortcut) {
-        await registerShortcut(savedShortcut, async () => {
+        const result = await registerShortcut(savedShortcut, async () => {
           await toggleWindow("main");
         });
+        if (!result.success) {
+          console.warn("Show main shortcut conflict on init:", result.error);
+        }
       }
     };
     initShortcut();

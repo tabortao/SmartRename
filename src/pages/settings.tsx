@@ -51,7 +51,11 @@ export default function SettingsPage() {
     const savedShortcut = localStorage.getItem(SHORTCUT_KEY);
     if (savedShortcut) {
       setShortcut(savedShortcut);
-      registerShortcut(savedShortcut, handleShowMainWindow);
+      registerShortcut(savedShortcut, handleShowMainWindow).then((result) => {
+        if (!result.success) {
+          console.warn("Show main shortcut conflict on init:", result.error);
+        }
+      });
     }
     const savedRenameShortcut = localStorage.getItem(RENAME_SHORTCUT_KEY);
     if (savedRenameShortcut) {
@@ -66,14 +70,36 @@ export default function SettingsPage() {
         const list = await invoke<TemplateConfig[]>("get_templates");
         setTemplates(list);
 
-        // Load default template IDs
+        // Load default template IDs, fallback to hardcoded defaults
         try {
           const fileDef = await invoke<string | null>("load_app_config", { key: "lastFileTemplateId" });
-          if (fileDef) setDefaultFileTemplateId(fileDef);
+          if (fileDef) {
+            setDefaultFileTemplateId(fileDef);
+          } else {
+            // Fallback to "日期_原文件名_版本" template
+            const defaultFile = list.find(
+              (t) => t.name === "日期_原文件名_版本" || t.name_zh === "日期_原文件名_版本"
+            );
+            if (defaultFile) {
+              setDefaultFileTemplateId(defaultFile.id);
+              await invoke("save_app_config", { key: "lastFileTemplateId", value: defaultFile.id });
+            }
+          }
         } catch { /* ignore */ }
         try {
           const folderDef = await invoke<string | null>("load_app_config", { key: "lastFolderTemplateId" });
-          if (folderDef) setDefaultFolderTemplateId(folderDef);
+          if (folderDef) {
+            setDefaultFolderTemplateId(folderDef);
+          } else {
+            // Fallback to "日期_原文件夹名" template
+            const defaultFolder = list.find(
+              (t) => t.name === "日期_原文件夹名" || t.name_zh === "日期_原文件夹名"
+            );
+            if (defaultFolder) {
+              setDefaultFolderTemplateId(defaultFolder.id);
+              await invoke("save_app_config", { key: "lastFolderTemplateId", value: defaultFolder.id });
+            }
+          }
         } catch { /* ignore */ }
       } catch (error) {
         console.error("Failed to load data:", error);
@@ -116,7 +142,19 @@ export default function SettingsPage() {
 
     if (newShortcut) {
       localStorage.setItem(SHORTCUT_KEY, newShortcut);
-      await registerShortcut(newShortcut, handleShowMainWindow, oldShortcut);
+      const result = await registerShortcut(newShortcut, handleShowMainWindow, oldShortcut);
+      if (!result.success) {
+        toast.error(t("settings.shortcut.conflict", { shortcut: newShortcut }));
+        // Revert to old shortcut
+        setShortcut(oldShortcut);
+        if (oldShortcut) {
+          localStorage.setItem(SHORTCUT_KEY, oldShortcut);
+          await registerShortcut(oldShortcut, handleShowMainWindow);
+        } else {
+          localStorage.removeItem(SHORTCUT_KEY);
+        }
+        return;
+      }
       await emit("shortcut-changed", { shortcut: newShortcut });
       toast.success(t("settings.shortcut.setSuccess", { shortcut: newShortcut }));
     } else {
@@ -356,7 +394,7 @@ export default function SettingsPage() {
                   <p className="text-sm font-medium">{t("settings.templates.defaultTemplates")}</p>
                   <div className="flex items-center gap-2">
                     <File className="text-muted-foreground h-4 w-4 shrink-0" />
-                    <label className="text-xs font-medium shrink-0">{t("settings.templates.fileTemplates")}</label>
+                    <label className="text-xs font-medium shrink-0">{t("settings.templates.file")}</label>
                     <select
                       className="border-border bg-background rounded-md border px-2 py-1 text-xs flex-1 min-w-0"
                       value={defaultFileTemplateId}
@@ -372,7 +410,7 @@ export default function SettingsPage() {
                   </div>
                   <div className="flex items-center gap-2">
                     <Folder className="text-muted-foreground h-4 w-4 shrink-0" />
-                    <label className="text-xs font-medium shrink-0">{t("settings.templates.folderTemplates")}</label>
+                    <label className="text-xs font-medium shrink-0">{t("settings.templates.folder")}</label>
                     <select
                       className="border-border bg-background rounded-md border px-2 py-1 text-xs flex-1 min-w-0"
                       value={defaultFolderTemplateId}

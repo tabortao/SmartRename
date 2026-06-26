@@ -159,7 +159,8 @@
       "renameShortcut": "一键重命名",
       "renameShortcutDesc": "选中文件/文件夹后，按快捷键一键按默认模板重命名",
       "setSuccess": "已将快捷键设为 {{shortcut}}！",
-      "cleared": "已取消快捷键！"
+      "cleared": "已取消快捷键！",
+      "conflict": "快捷键 {{shortcut}} 已被其他应用占用"
     },
     "templates": {
       "title": "模板管理",
@@ -173,6 +174,8 @@
       "fileTemplates": "文件模板",
       "folderTemplates": "文件夹模板",
       "defaultTemplates": "默认模板",
+      "file": "文件",
+      "folder": "文件夹",
       "none": "无"
     }
   },

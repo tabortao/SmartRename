@@ -30,6 +30,8 @@ export function ThemeProvider({
     () => (localStorage.getItem(storageKey) as Theme) || defaultTheme
   );
 
+  console.log("[ThemeProvider] Render - current theme:", theme, "storageKey:", storageKey);
+
   useEffect(() => {
     const root = window.document.documentElement;
     root.classList.remove("light", "dark");
@@ -39,16 +41,21 @@ export function ThemeProvider({
         ? "dark"
         : "light";
       root.classList.add(systemTheme);
+      root.setAttribute("data-theme", "system:" + systemTheme);
+      console.log("[ThemeProvider] Applied system theme:", systemTheme);
       return;
     }
 
     root.classList.add(theme);
+    root.setAttribute("data-theme", theme);
+    console.log("[ThemeProvider] Applied theme:", theme);
   }, [theme]);
 
   // Listen for localStorage changes to sync theme across windows
   useEffect(() => {
     const handleStorageChange = (e: StorageEvent) => {
       if (e.key === storageKey && e.newValue) {
+        console.log("[ThemeProvider] Storage event: setting theme to", e.newValue);
         setTheme(e.newValue as Theme);
       }
     };
@@ -57,9 +64,10 @@ export function ThemeProvider({
     return () => window.removeEventListener("storage", handleStorageChange);
   }, [storageKey]);
 
-  const value = {
+  const value: ThemeProviderState = {
     theme,
     setTheme: (newTheme: Theme) => {
+      console.log("[ThemeProvider] setTheme called:", newTheme, "current:", theme);
       localStorage.setItem(storageKey, newTheme);
       setTheme(newTheme);
     },

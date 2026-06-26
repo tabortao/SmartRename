@@ -136,13 +136,13 @@ fn get_default_templates() -> Vec<TemplateConfig> {
             updated_at: chrono::Local::now().to_rfc3339(),
         },
         // ===== Folder templates (no {Ext}) =====
-        // 7. 日期_文件夹 / Date_Folder
+        // 7. 日期_原文件夹名 / Date_OriginalFolderName
         // Example: 20260624_项目资料
         TemplateConfig {
             id: uuid::Uuid::new_v4().to_string(),
-            name: "日期_文件夹".to_string(),
-            name_zh: "日期_文件夹".to_string(),
-            name_en: "Date_Folder".to_string(),
+            name: "日期_原文件夹名".to_string(),
+            name_zh: "日期_原文件夹名".to_string(),
+            name_en: "Date_OriginalFolderName".to_string(),
             pattern: "{Date:YYYYMMDD}_{OriginalName}".to_string(),
             created_at: chrono::Local::now().to_rfc3339(),
             updated_at: chrono::Local::now().to_rfc3339(),

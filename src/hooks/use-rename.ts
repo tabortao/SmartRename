@@ -132,7 +132,7 @@ export function useRename() {
           }
         } else if (detectedType === "folder") {
           const defaultTemplate = templatesRef.current.find(
-            (t) => t.name === "日期_文件夹" || t.name_zh === "日期_文件夹"
+            (t) => t.name === "日期_原文件夹名" || t.name_zh === "日期_原文件夹名"
           );
           if (defaultTemplate) {
             selectTemplate(defaultTemplate);

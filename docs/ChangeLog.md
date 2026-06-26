@@ -14,19 +14,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Per-type default template dropdowns: independently set default file template and default folder template
 - Diagnostic logging in Rust backend (`parse_cli_args`, `detect_item_type`, single instance callback) and frontend (`new-files` event listener, file state changes) to help diagnose right-click context menu issues
 - Troubleshooting guide: `docs/CONTEXT_MENU_TROUBLESHOOTING.md` documenting the `%*` vs `%1` issue and common pitfalls
+- Function key (F1-F12) support for shortcut input: can now set standalone function keys as shortcuts without requiring modifier keys
+- Shortcut conflict detection: when a shortcut is already in use by another application, the user is notified with a toast error and the shortcut is reverted
+- Default template initialization: file template defaults to "日期_原文件名_版本", folder template defaults to "日期_原文件夹名" on first run
+- Theme debugging: `data-theme` attribute on HTML element and console logs for easier theme troubleshooting
 
 ### Changed
 
 - Removed per-template shortcut settings from template management; replaced with a single global rename shortcut
 - Rename shortcut auto-registers when files are loaded and auto-unregisters when files are cleared
-- Default template layout: split into two rows (file template and folder template) for less crowded UI; labels simplified to "File Templates" / "Folder Templates" (removed "default" prefix)
+- Default template layout: split into two rows (file template and folder template) for less crowded UI; labels simplified to "文件" / "文件夹" (removed "默认" prefix)
 - Separated `new-files` event listener into its own `useEffect` to prevent potential listener re-registration issues when `i18n` reference changes
+- Renamed default folder template from "日期_文件夹" to "日期_原文件夹名" (Date_Folder → Date_OriginalFolderName)
+- `registerShortcut` returns `{ success: boolean; error?: string }` for conflict detection
+- ThemeProvider: simplified from `useCallback`/`useMemo` to plain object for context value, added render logging for debugging
+- Rename shortcut handler now directly invokes `apply_rename` Tauri command instead of chaining `selectTemplate` + `applyRename` via refs, eliminating React state timing issues
 
 ### Fixed
 
 - Right-click context menu files/folders not entering rename area: root cause was `%*` in registry command does not expand to the file path for Windows shell commands; changed to `%1` which Windows passes as the selected file/folder path
 - Removed diagnostic toast notifications that were shown when files were received from context menu or CLI args
 - Rename shortcut not re-registering after change in Settings: fixed empty callback in `rename-shortcut-changed` event handler by using version-based re-triggering
+- Folder rename shortcut not working: shortcut handler now directly calls `invoke("apply_rename", ...)` instead of relying on React state propagation through `selectTemplate` + `applyRename` refs with a 100ms timeout
+- Settings page theme buttons (light/dark/system) not responding: added render-level logging to `ThemeProvider` to aid debugging cross-window theme sync
 
 ## [0.3.2] - 2026-06-24
 

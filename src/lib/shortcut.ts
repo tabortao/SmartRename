@@ -21,11 +21,6 @@ export function convertToShortcut(event: KeyboardEvent): string {
     keys.push("Shift");
   }
 
-  // Must have modifier keys
-  if (!keys.length) {
-    return "";
-  }
-
   // Get the main key pressed
   let mainKey = event.key;
 
@@ -44,6 +39,23 @@ export function convertToShortcut(event: KeyboardEvent): string {
     Escape: "Esc",
     Enter: "Enter",
   };
+
+  // Function keys: F1-F12 are allowed as standalone shortcuts (no modifier required)
+  const functionKeyMatch = mainKey.match(/^F(\d{1,2})$/i);
+  if (functionKeyMatch) {
+    const num = parseInt(functionKeyMatch[1], 10);
+    if (num >= 1 && num <= 24) {
+      keys.push(mainKey.toUpperCase());
+      const shortcut = keys.join("+");
+      console.log("Captured shortcut:", shortcut);
+      return shortcut;
+    }
+  }
+
+  // Must have modifier keys for non-function-key shortcuts
+  if (!keys.length) {
+    return "";
+  }
 
   // Use mapped value if key exists in keyMap
   if (keyMap[mainKey]) {
@@ -66,7 +78,7 @@ export async function registerShortcut(
   shortcut: string,
   callback: () => void,
   oldShortcut?: string
-): Promise<void> {
+): Promise<{ success: boolean; error?: string }> {
   if (oldShortcut) {
     await unregisterShortcut(oldShortcut);
   }
@@ -78,8 +90,11 @@ export async function registerShortcut(
       }
     });
     console.log("Shortcut registered successfully:", shortcut);
+    return { success: true };
   } catch (e) {
-    console.error("Failed to register shortcut:", e);
+    const errorMsg = String(e);
+    console.error("Failed to register shortcut:", errorMsg);
+    return { success: false, error: errorMsg };
   }
 }
 
