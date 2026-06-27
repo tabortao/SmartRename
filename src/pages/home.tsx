@@ -13,6 +13,7 @@ import { RenameControls } from "@/components/rename/rename-controls";
 import { registerShortcut } from "@/lib/shortcut";
 import { toggleWindow } from "@/lib/window";
 import { useRename, type TemplateConfig } from "@/hooks/use-rename";
+import type { PreviewItem, RenameResult } from "@/hooks/use-rename";
 import { toast } from "sonner";
 import { Toaster } from "@/components/ui/sonner";
 
@@ -42,6 +43,8 @@ export default function HomePage() {
   const [editorOpen, setEditorOpen] = useState(false);
   const [editingTemplate, setEditingTemplate] = useState<TemplateConfig | null>(null);
   const [isDragOver, setIsDragOver] = useState(false);
+  const [aiLoading, setAiLoading] = useState(false);
+  const [aiPreviewResults, setAiPreviewResults] = useState<PreviewItem[] | null>(null);
 
   // Parse template variables for dynamic form
   const [templateVars, setTemplateVars] = useState<import("@/hooks/use-rename").TemplateVariable[]>([]);
@@ -218,14 +221,45 @@ export default function HomePage() {
   }, [applyRename, t]);
 
   const handleReset = useCallback(() => {
+    setAiPreviewResults(null);
     reset();
     toast.info(t("rename.resetComplete"));
   }, [reset, t]);
 
   const handleClearFiles = useCallback(() => {
     if (files.length === 0) return;
+    setAiPreviewResults(null);
     clearFiles();
   }, [files.length, clearFiles]);
+
+  const handleSmartRename = useCallback(async () => {
+    if (files.length === 0) return;
+
+    setAiLoading(true);
+    setAiPreviewResults(null);
+    try {
+      // First, get AI preview results
+      const previews = await invoke<PreviewItem[]>("ai_preview_rename", { files });
+      setAiPreviewResults(previews);
+
+      // Then apply the rename
+      const results = await invoke<RenameResult[]>("ai_rename", { files });
+      const successCount = results.filter((r) => r.success).length;
+      const failCount = results.filter((r) => !r.success).length;
+
+      if (failCount === 0) {
+        toast.success(t("rename.aiRenameSuccess", { count: successCount }));
+        setAiPreviewResults(null);
+      } else {
+        toast.warning(t("rename.partialRename", { success: successCount, failed: failCount }));
+      }
+    } catch (error) {
+      const errMsg = typeof error === "string" ? error : String(error);
+      toast.error(t("rename.aiRenameError", { error: errMsg }));
+    } finally {
+      setAiLoading(false);
+    }
+  }, [files, t]);
 
   const getDragOverlayText = () => {
     if (itemType === "folder") return t("rename.dropItemsHere");
@@ -279,7 +313,7 @@ export default function HomePage() {
 
       <div className="border-border border-t" />
 
-      <FileList items={previewResults} itemType={itemType} />
+      <FileList items={aiPreviewResults || previewResults} itemType={itemType} />
 
       {selectedTemplate && (
         <>
@@ -299,9 +333,11 @@ export default function HomePage() {
         fileCount={files.length}
         canApply={!!selectedTemplate && files.length > 0}
         onApply={handleApplyRename}
+        onSmartRename={handleSmartRename}
         onReset={handleReset}
         onClearFiles={handleClearFiles}
         itemType={itemType}
+        aiLoading={aiLoading}
       />
 
       <TemplateEditorDialog

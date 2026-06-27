@@ -18,7 +18,7 @@ fn get_config_path() -> PathBuf {
 }
 
 /// Load config JSON, returns empty map if file doesn't exist
-fn load_config() -> Result<HashMap<String, String>, String> {
+pub fn load_config() -> Result<HashMap<String, String>, String> {
     let path = get_config_path();
     if !path.exists() {
         return Ok(HashMap::new());
@@ -28,7 +28,7 @@ fn load_config() -> Result<HashMap<String, String>, String> {
 }
 
 /// Save config JSON
-fn save_config(config: &HashMap<String, String>) -> Result<(), String> {
+pub fn save_config(config: &HashMap<String, String>) -> Result<(), String> {
     let path = get_config_path();
     let content = serde_json::to_string_pretty(config).map_err(|e| format!("Failed to serialize config: {}", e))?;
     fs::write(&path, content).map_err(|e| format!("Failed to write config: {}", e))
@@ -367,9 +367,19 @@ pub fn apply_rename(
 
 /// Perform direct rename from context menu without opening UI
 /// Returns a status message string
-pub fn perform_direct_rename(app: &AppHandle, paths: Vec<String>) -> Result<String, String> {
+pub async fn perform_direct_rename(app: &AppHandle, paths: Vec<String>) -> Result<String, String> {
     if paths.is_empty() {
         return Err("No files provided".to_string());
+    }
+
+    // Check if AI context menu rename is enabled
+    let config = load_config()?;
+    let ai_enabled = config
+        .get("ai_context_menu_enabled")
+        .map(|v| v == "true")
+        .unwrap_or(false);
+    if ai_enabled {
+        return super::ai::perform_direct_ai_rename(app, paths).await;
     }
 
     // Detect item type

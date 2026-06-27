@@ -1,5 +1,5 @@
 import { Button } from "@/components/ui/button";
-import { RotateCcw, Play, Trash2, Files, Folder } from "lucide-react";
+import { RotateCcw, Play, Trash2, Files, Folder, Sparkles } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import type { ItemType } from "@/hooks/use-rename";
 
@@ -7,18 +7,22 @@ interface RenameControlsProps {
   fileCount: number;
   canApply: boolean;
   onApply: () => void;
+  onSmartRename?: () => void;
   onReset: () => void;
   onClearFiles?: () => void;
   itemType?: ItemType;
+  aiLoading?: boolean;
 }
 
 export function RenameControls({
   fileCount,
   canApply,
   onApply,
+  onSmartRename,
   onReset,
   onClearFiles,
   itemType,
+  aiLoading,
 }: RenameControlsProps) {
   const { t } = useTranslation();
   const hasFiles = fileCount > 0;
@@ -44,6 +48,17 @@ export function RenameControls({
           <Play className="h-4 w-4" />
           {t("rename.rename")}
         </Button>
+        {onSmartRename && (
+          <Button
+            onClick={onSmartRename}
+            disabled={!hasFiles || aiLoading}
+            size="sm"
+            className="bg-purple-600 hover:bg-purple-700 text-white gap-1.5"
+          >
+            <Sparkles className="h-4 w-4" />
+            {aiLoading ? t("rename.aiRenaming") : t("rename.aiRename")}
+          </Button>
+        )}
         <Button variant="outline" onClick={onReset} size="sm" className="gap-1.5">
           <RotateCcw className="h-4 w-4" />
           {t("rename.reset")}

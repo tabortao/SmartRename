@@ -9,6 +9,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- AI-powered smart rename feature: configure OpenAI-compatible AI providers (DeepSeek, Custom) in Settings
+- AI settings page with provider selection, API URL, API key, model, and custom prompts for files and folders
+- Smart Rename button on main page: auto-detects file/folder type, uses AI to generate names, and renames items
+- AI context menu integration: right-click Smart Rename can use AI instead of templates when enabled in Settings
+- New Rust module `rename::ai` with `ai_rename` and `ai_preview_rename` Tauri commands
+- `reqwest` dependency for OpenAI-compatible API calls in Rust backend
+- AI config keys stored in `config.json`: `ai_provider`, `ai_api_url`, `ai_api_key`, `ai_model`, `ai_file_prompt`, `ai_folder_prompt`, `ai_context_menu_enabled`
 - Right-click context menu now performs direct rename without opening the UI (`--direct` flag in registry command)
 - Direct rename results shown as toast notifications when the app is already running (single-instance callback)
 - `perform_direct_rename` function in Rust backend: loads default template, detects item type, and applies rename directly

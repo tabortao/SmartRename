@@ -10,7 +10,7 @@ import { WindowFrame } from "@/components/window-frame";
 import { LanguageToggle } from "@/components/language-toggle";
 import { ShortcutInput } from "@/components/shortcut-input";
 import { TemplateEditorDialog } from "@/components/rename/template-editor-dialog";
-import { Moon, Sun, Monitor, Palette, Keyboard, FileText, Folder, File } from "lucide-react";
+import { Moon, Sun, Monitor, Palette, Keyboard, FileText, Folder, File, Sparkles, Wifi } from "lucide-react";
 import { registerShortcut, unregisterShortcut } from "@/lib/shortcut";
 import { toggleWindow } from "@/lib/window";
 import { toast } from "sonner";
@@ -21,7 +21,7 @@ import { getTemplateDisplayName } from "@/hooks/use-rename";
 
 const SHORTCUT_KEY = "global-shortcut-show-main";
 
-type SettingSection = "appearance" | "shortcut" | "templates";
+type SettingSection = "appearance" | "shortcut" | "templates" | "ai";
 type TemplateTab = "file" | "folder";
 
 export default function SettingsPage() {
@@ -40,6 +40,20 @@ export default function SettingsPage() {
   // Default template state
   const [defaultFileTemplateId, setDefaultFileTemplateId] = useState<string>("");
   const [defaultFolderTemplateId, setDefaultFolderTemplateId] = useState<string>("");
+
+  // AI settings state
+  const [aiProvider, setAiProvider] = useState("deepseek");
+  const [aiApiUrl, setAiApiUrl] = useState("https://api.deepseek.com");
+  const [aiApiKey, setAiApiKey] = useState("");
+  const [aiModel, setAiModel] = useState("deepseek-v4-flash");
+  const [aiFilePrompt, setAiFilePrompt] = useState(
+    "你是一位文件整理大师，擅长为文件起简洁、规范、易检索的名字。\n\n当前日期：{DATE}\n\n命名格式：{DATE} 描述内容_v版本号.扩展名\n示例：{DATE} 会议纪要_v1.docx\n\n命名规则：\n1. 文件名前必须加上当前日期（YYYYMMDD格式），日期后加一个空格\n2. 保留原文件扩展名不变\n3. 文件名末尾加版本号，格式为 _v1、_v2 等，默认从 v1 开始\n4. 文件名使用中文或英文，与原文件名语言保持一致\n5. 用清晰的关键词概括文件内容，便于日后搜索\n6. 去除原文件名中无意义的数字、日期等冗余信息\n\n只返回符合格式的新文件名（含扩展名），不要解释，不要分析文件内容。"
+  );
+  const [aiFolderPrompt, setAiFolderPrompt] = useState(
+    "你是一位文件整理大师，擅长为文件夹起简洁、规范、易分类的名字。\n\n当前日期：{DATE}\n\n命名格式：{DATE} 分类描述\n示例：{DATE} 项目资料\n\n命名规则：\n1. 文件夹名前必须加上当前日期（YYYYMMDD格式），日期后加一个空格\n2. 文件夹名使用中文或英文，与原文件夹名语言保持一致\n3. 使用概括性强的分类词汇，便于层级管理\n4. 去除原文件夹名中无意义的数字、日期等冗余信息\n5. 避免使用括号等特殊字符\n\n只返回符合格式的新文件夹名，不要解释，不要分析文件夹内容。"
+  );
+  const [aiContextMenuEnabled, setAiContextMenuEnabled] = useState(false);
+  const [testLoading, setTestLoading] = useState(false);
 
   const handleShowMainWindow = useCallback(async () => {
     await toggleWindow("main");
@@ -116,7 +130,27 @@ export default function SettingsPage() {
     };
     loadAll();
     checkContextMenu();
+    loadAiConfig();
   }, []);
+
+  const loadAiConfig = async () => {
+    try {
+      const provider = await invoke<string | null>("load_app_config", { key: "ai_provider" });
+      if (provider) setAiProvider(provider);
+      const apiUrl = await invoke<string | null>("load_app_config", { key: "ai_api_url" });
+      if (apiUrl) setAiApiUrl(apiUrl);
+      const apiKey = await invoke<string | null>("load_app_config", { key: "ai_api_key" });
+      if (apiKey) setAiApiKey(apiKey);
+      const model = await invoke<string | null>("load_app_config", { key: "ai_model" });
+      if (model) setAiModel(model);
+      const filePrompt = await invoke<string | null>("load_app_config", { key: "ai_file_prompt" });
+      if (filePrompt) setAiFilePrompt(filePrompt);
+      const folderPrompt = await invoke<string | null>("load_app_config", { key: "ai_folder_prompt" });
+      if (folderPrompt) setAiFolderPrompt(folderPrompt);
+      const ctxMenu = await invoke<string | null>("load_app_config", { key: "ai_context_menu_enabled" });
+      setAiContextMenuEnabled(ctxMenu === "true");
+    } catch { /* ignore */ }
+  };
 
   const reloadTemplates = useCallback(async () => {
     try {
@@ -217,6 +251,42 @@ export default function SettingsPage() {
     }
   };
 
+  const handleTestConnection = async () => {
+    if (!aiApiKey.trim()) {
+      toast.error(t("settings.ai.testError", { error: "API key is empty" }));
+      return;
+    }
+    setTestLoading(true);
+    try {
+      await invoke<string>("test_ai_connection", {
+        apiUrl: aiApiUrl,
+        apiKey: aiApiKey,
+        model: aiModel,
+      });
+      toast.success(t("settings.ai.testSuccess"));
+    } catch (error) {
+      const errMsg = typeof error === "string" ? error : String(error);
+      toast.error(t("settings.ai.testError", { error: errMsg }));
+    } finally {
+      setTestLoading(false);
+    }
+  };
+
+  const handleSaveAiConfig = async () => {
+    try {
+      await invoke("save_app_config", { key: "ai_provider", value: aiProvider });
+      await invoke("save_app_config", { key: "ai_api_url", value: aiApiUrl });
+      await invoke("save_app_config", { key: "ai_api_key", value: aiApiKey });
+      await invoke("save_app_config", { key: "ai_model", value: aiModel });
+      await invoke("save_app_config", { key: "ai_file_prompt", value: aiFilePrompt });
+      await invoke("save_app_config", { key: "ai_folder_prompt", value: aiFolderPrompt });
+      await invoke("save_app_config", { key: "ai_context_menu_enabled", value: aiContextMenuEnabled.toString() });
+      toast.success(t("settings.ai.saveSuccess"));
+    } catch (error) {
+      toast.error(t("settings.ai.saveError"));
+    }
+  };
+
   const fileTemplates = templates.filter((t) => t.pattern.includes("{Ext}"));
   const folderTemplates = templates.filter((t) => !t.pattern.includes("{Ext}"));
   const currentTemplates = templateTab === "file" ? fileTemplates : folderTemplates;
@@ -225,6 +295,7 @@ export default function SettingsPage() {
     { id: "appearance" as SettingSection, label: t("settings.appearance.title"), icon: Palette },
     { id: "shortcut" as SettingSection, label: t("settings.shortcut.title"), icon: Keyboard },
     { id: "templates" as SettingSection, label: t("settings.templates.title"), icon: FileText },
+    { id: "ai" as SettingSection, label: t("settings.ai.title"), icon: Sparkles },
   ];
 
   return (
@@ -466,6 +537,145 @@ export default function SettingsPage() {
                     ))}
                   </div>
                 )}
+              </div>
+            </div>
+          )}
+
+          {activeSection === "ai" && (
+            <div className="space-y-4">
+              <div>
+                <h2 className="mb-1 text-lg font-semibold">{t("settings.ai.title")}</h2>
+                <p className="text-muted-foreground text-sm">
+                  {t("settings.ai.description")}
+                </p>
+              </div>
+
+              <div className="space-y-3">
+                {/* AI Provider */}
+                <div className="flex items-center justify-between py-2">
+                  <label className="text-sm font-medium">{t("settings.ai.provider")}</label>
+                  <select
+                    className="border-border bg-background rounded-md border px-2 py-1 text-sm w-32"
+                    value={aiProvider}
+                    onChange={(e) => {
+                      setAiProvider(e.target.value);
+                      if (e.target.value === "deepseek") {
+                        setAiApiUrl("https://api.deepseek.com");
+                        setAiModel("deepseek-v4-flash");
+                      }
+                    }}
+                  >
+                    <option value="deepseek">{t("settings.ai.providerDeepseek")}</option>
+                    <option value="custom">{t("settings.ai.providerCustom")}</option>
+                  </select>
+                </div>
+
+                <div className="border-t" />
+
+                {/* API URL */}
+                <div className="space-y-1.5">
+                  <label className="text-sm font-medium">{t("settings.ai.apiUrl")}</label>
+                  <input
+                    type="text"
+                    className="border-border bg-background w-full rounded-md border px-3 py-1.5 text-sm"
+                    placeholder={t("settings.ai.apiUrlPlaceholder")}
+                    value={aiApiUrl}
+                    onChange={(e) => setAiApiUrl(e.target.value)}
+                  />
+                </div>
+
+                {/* API Key */}
+                <div className="space-y-1.5">
+                  <label className="text-sm font-medium">{t("settings.ai.apiKey")}</label>
+                  <input
+                    type="password"
+                    className="border-border bg-background w-full rounded-md border px-3 py-1.5 text-sm"
+                    placeholder={t("settings.ai.apiKeyPlaceholder")}
+                    value={aiApiKey}
+                    onChange={(e) => setAiApiKey(e.target.value)}
+                  />
+                </div>
+
+                {/* Model */}
+                <div className="space-y-1.5">
+                  <label className="text-sm font-medium">{t("settings.ai.model")}</label>
+                  <input
+                    type="text"
+                    className="border-border bg-background w-full rounded-md border px-3 py-1.5 text-sm"
+                    placeholder={t("settings.ai.modelPlaceholder")}
+                    value={aiModel}
+                    onChange={(e) => setAiModel(e.target.value)}
+                  />
+                </div>
+
+                <div className="border-t" />
+
+                {/* File Naming Prompt */}
+                <div className="space-y-1.5">
+                  <label className="text-sm font-medium">{t("settings.ai.filePrompt")}</label>
+                  <textarea
+                    className="border-border bg-background w-full rounded-md border px-3 py-1.5 text-sm min-h-[80px] resize-y"
+                    placeholder={t("settings.ai.filePromptPlaceholder")}
+                    value={aiFilePrompt}
+                    onChange={(e) => setAiFilePrompt(e.target.value)}
+                    rows={3}
+                  />
+                </div>
+
+                {/* Folder Naming Prompt */}
+                <div className="space-y-1.5">
+                  <label className="text-sm font-medium">{t("settings.ai.folderPrompt")}</label>
+                  <textarea
+                    className="border-border bg-background w-full rounded-md border px-3 py-1.5 text-sm min-h-[80px] resize-y"
+                    placeholder={t("settings.ai.folderPromptPlaceholder")}
+                    value={aiFolderPrompt}
+                    onChange={(e) => setAiFolderPrompt(e.target.value)}
+                    rows={3}
+                  />
+                </div>
+
+                <div className="border-t" />
+
+                {/* Context Menu AI Toggle */}
+                <div className="flex items-center justify-between py-2">
+                  <div className="flex-1">
+                    <label className="text-sm font-medium">{t("settings.ai.contextMenuAi")}</label>
+                    <p className="text-muted-foreground mt-0.5 text-xs">
+                      {t("settings.ai.contextMenuAiDesc")}
+                    </p>
+                  </div>
+                  <button
+                    onClick={() => setAiContextMenuEnabled(!aiContextMenuEnabled)}
+                    className={cn(
+                      "relative inline-flex h-6 w-11 items-center rounded-full transition-colors",
+                      aiContextMenuEnabled ? "bg-emerald-600" : "bg-gray-300 dark:bg-gray-600"
+                    )}
+                  >
+                    <span
+                      className={cn(
+                        "inline-block h-4 w-4 transform rounded-full bg-white transition-transform",
+                        aiContextMenuEnabled ? "translate-x-6" : "translate-x-1"
+                      )}
+                    />
+                  </button>
+                </div>
+
+                {/* Action Buttons */}
+                <div className="flex gap-2">
+                  <Button
+                    variant="outline"
+                    onClick={handleTestConnection}
+                    disabled={testLoading}
+                    size="sm"
+                    className="flex-1 gap-1.5"
+                  >
+                    <Wifi className="h-4 w-4" />
+                    {testLoading ? t("settings.ai.testConnecting") : t("settings.ai.testConnection")}
+                  </Button>
+                  <Button onClick={handleSaveAiConfig} size="sm" className="flex-1">
+                    {t("settings.ai.save")}
+                  </Button>
+                </div>
               </div>
             </div>
           )}

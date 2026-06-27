@@ -39,10 +39,13 @@ pub fn run() {
             // Handle --direct flag: rename and exit without opening UI
             if is_direct && !direct_files.is_empty() {
                 println!("[SmartRename] Direct rename mode: {} files", direct_files.len());
-                match rename::commands::perform_direct_rename(app.handle(), direct_files) {
-                    Ok(msg) => println!("[SmartRename] {}", msg),
-                    Err(e) => eprintln!("[SmartRename] Direct rename failed: {}", e),
-                }
+                let handle = app.handle().clone();
+                tauri::async_runtime::block_on(async move {
+                    match rename::commands::perform_direct_rename(&handle, direct_files).await {
+                        Ok(msg) => println!("[SmartRename] {}", msg),
+                        Err(e) => eprintln!("[SmartRename] Direct rename failed: {}", e),
+                    }
+                });
                 std::process::exit(0);
             }
 
@@ -72,16 +75,19 @@ pub fn run() {
                     .collect();
                 println!("[SmartRename] Single instance direct rename: {:?}", file_paths);
                 if !file_paths.is_empty() {
-                    match rename::commands::perform_direct_rename(app, file_paths) {
-                        Ok(msg) => {
-                            println!("[SmartRename] {}", msg);
-                            let _ = app.emit("direct-rename-success", msg);
+                    let handle = app.clone();
+                    tauri::async_runtime::spawn(async move {
+                        match rename::commands::perform_direct_rename(&handle, file_paths).await {
+                            Ok(msg) => {
+                                println!("[SmartRename] {}", msg);
+                                let _ = handle.emit("direct-rename-success", msg);
+                            }
+                            Err(e) => {
+                                eprintln!("[SmartRename] Direct rename failed: {}", e);
+                                let _ = handle.emit("direct-rename-error", e);
+                            }
                         }
-                        Err(e) => {
-                            eprintln!("[SmartRename] Direct rename failed: {}", e);
-                            let _ = app.emit("direct-rename-error", e);
-                        }
-                    }
+                    });
                 }
                 return;
             }
@@ -133,6 +139,9 @@ pub fn run() {
             rename::commands::detect_item_type,
             rename::commands::has_input_variable,
             rename::commands::has_required_input,
+            rename::ai::ai_preview_rename,
+            rename::ai::ai_rename,
+            rename::ai::test_ai_connection,
         ]);
 
     // Updater disabled: requires signed package keys & endpoints.
